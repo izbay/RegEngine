@@ -1,0 +1,4 @@
+name: RegEngine
+author: izbay
+version: 0.10
+main: com.github.izbay.regengine.RegEnginePlugin
