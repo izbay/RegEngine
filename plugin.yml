@@ -2,3 +2,4 @@ name: SiegeEngine
 author: izbay
 version: 0.10
 main: com.github.izbay.siegeengine.SiegeEnginePlugin
+depend: [RegEngine]
