@@ -1,7 +1,7 @@
 package com.github.izbay.siegeengine;
 
-import net.minecraft.server.v1_7_R1.EntityMinecartAbstract;
-import net.minecraft.server.v1_7_R1.NBTTagCompound;
+//import net.minecraft.server.v1_7_R1.EntityMinecartAbstract;
+//import net.minecraft.server.v1_7_R1.NBTTagCompound;
 
 import com.github.izbay.regengine.RegEnginePlugin;
 
@@ -9,19 +9,20 @@ import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.Sound;
-import org.bukkit.World;
-import org.bukkit.craftbukkit.v1_7_R1.entity.CraftMinecart;
+//import org.bukkit.World;
+//import org.bukkit.craftbukkit.v1_7_R1.entity.CraftMinecart;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Minecart;
 import org.bukkit.entity.Player;
+import org.bukkit.entity.Vehicle;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
-import org.bukkit.event.block.BlockPhysicsEvent;
-import org.bukkit.event.player.PlayerInteractEntityEvent;
+//import org.bukkit.event.block.BlockPhysicsEvent;
+//import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.event.vehicle.VehicleBlockCollisionEvent;
 import org.bukkit.event.vehicle.VehicleEntityCollisionEvent;
-import org.bukkit.util.Vector;
 
 public class PlayerListener implements Listener{
 	SiegeEnginePlugin plugin = (SiegeEnginePlugin)Bukkit.getServer().getPluginManager().getPlugin("SiegeEngine");
@@ -33,30 +34,45 @@ public class PlayerListener implements Listener{
 		if(e.getAction()==Action.RIGHT_CLICK_BLOCK && p.getItemInHand().getType() == Material.MINECART){
 			p.getWorld().playSound(p.getLocation(), Sound.ANVIL_LAND, 1, 1);
 			Minecart minecart = (Minecart) p.getWorld().spawnEntity(e.getClickedBlock().getLocation().add(0, 1.4, 0), EntityType.MINECART);
-			Minecart brace = (Minecart) p.getWorld().spawnEntity(e.getClickedBlock().getLocation().add(0,1.4,0), EntityType.MINECART);
-			setData(brace, Material.LOG, 8);
-			minecart.setPassenger(brace);
+			//Minecart brace = (Minecart) p.getWorld().spawnEntity(e.getClickedBlock().getLocation().add(0,1.4,0), EntityType.MINECART);
+			//setData(brace, Material.LOG, 8);
+			//minecart.setPassenger(brace);
 			minecart.setMaxSpeed(0.02);
 		}
     }
 	
-	@SuppressWarnings("deprecation")
 	@EventHandler
-	private void playSound(PlayerInteractEntityEvent e) {
-		Player p = e.getPlayer();
-		if(e.getRightClicked() instanceof Minecart && p.getItemInHand().getType().isBlock()){
-			e.setCancelled(true);
-			setData((Minecart)e.getRightClicked(),p.getItemInHand().getType(), p.getItemInHand().getData().getData());
-		}
-    }
-
-	@EventHandler
-	private void cancelPhys(BlockPhysicsEvent e){
-		if(e.getChangedType() == Material.RAILS){
-			e.setCancelled(true);
+	private void pushCart(VehicleBlockCollisionEvent e){
+		Location v = e.getVehicle().getLocation();
+		Location upLoc = e.getBlock().getLocation().add(0,1,0);
+		
+		if(e.getBlock().getLocation().getBlock().getType().isSolid()){
+			if(!upLoc.getBlock().getType().isSolid()){
+				reg.alter(v, Material.RAILS);
+				reg.alter(upLoc, Material.RAILS);
+			}
 		}
 	}
 	
+	@EventHandler
+	private void nudgeCart(VehicleEntityCollisionEvent e){
+		if(e.getEntity() instanceof Player){
+			Vehicle v = e.getVehicle();
+			Location l = v.getLocation();
+			Player p = (Player)e.getEntity();
+			
+			l.setYaw(p.getLocation().getYaw()+90);
+			
+			/*double yaw = (p.getLocation().getYaw()+90) * Math.PI / 180;
+			double mult = 0.05;
+			Vector vec = new Vector(Math.cos(yaw)*mult, 0, Math.sin(yaw)*mult);
+			l.add(vec);*/
+			
+			v.teleport(l);
+		}
+	}
+	
+	/**
 	@EventHandler
 	private void pushCart(VehicleEntityCollisionEvent e){
 		if(e.getVehicle().getType() == EntityType.MINECART){
@@ -114,5 +130,5 @@ public class PlayerListener implements Listener{
 	private static void setCompound(EntityMinecartAbstract target, NBTTagCompound compound)
 	  {
 	    target.f(compound);
-	  }
+	  }*/
 }
