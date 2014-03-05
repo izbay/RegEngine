@@ -60,6 +60,7 @@ public class PlayerListener implements Listener{
 			System.out.println(e.getRightClicked().getLocation().getYaw());
 			e.setCancelled(true);
 		}
+		//TODO: Move the climb slope code to here. Take it out of collision for controllability.
 	}
 	
 	@EventHandler
@@ -76,23 +77,21 @@ public class PlayerListener implements Listener{
 					reg.alter(upLoc, Material.RAILS);
 				} else {
 					Double yaw = toRadians(v.getYaw());
+					int sin = (int) Math.round(Math.sin(yaw));
+					int cos = (int) Math.round(Math.cos(yaw));
 					
 					//Generate a small cone. We'll worry about multipliers and non-right angles later.
 					Vector[] vec = {
 							new Vector(0,0,0),
 							// Up Down
-							new Vector(0,1,0), 
-							new Vector(0,-1,0),
+							new Vector(0,1,0), new Vector(0,-1,0),
 							// Left Right
-							new Vector(0,0,-Math.round(Math.sin(yaw))), 
-							new Vector(-Math.round(Math.cos(yaw)),0,0), 
-							new Vector(Math.round(Math.cos(yaw)),0,0), 
-							new Vector(0,0,Math.round(Math.sin(yaw))),
+							new Vector(0,0,-sin), new Vector(-cos,0,0),
+							new Vector(cos,0,0), new Vector(0,0,sin),
 							// Forward
-							new Vector(Math.round(Math.sin(yaw)),0,0),
-							new Vector(0,0,Math.round(Math.cos(yaw))),
-							new Vector(Math.round(Math.sin(yaw))*2,0,0),
-							new Vector(0,0,Math.round(Math.cos(yaw)))};
+							new Vector(sin,0,0), new Vector(sin*2,0,0),
+							new Vector(0,0,cos), new Vector(0,0,cos*2)};
+					
 					for(int i=0; i<vec.length; i++){
 						Location test = new Location(upLoc.getWorld(), upLoc.getX(), upLoc.getY(), upLoc.getZ());
 						test = test.add(vec[i]);
@@ -134,7 +133,6 @@ public class PlayerListener implements Listener{
 	    NBTTagCompound minecartTag = getCompound(rawMinecart);
 	    minecartTag.setByte("CustomDisplayTile", (byte)1);
 	    minecartTag.setInt("DisplayTile", block.getId());
-	    //minecartTag.setInt("DisplayData", 0);
 	    minecartTag.setInt("DisplayOffset", data);
 	    
 	    setCompound(rawMinecart, minecartTag);
