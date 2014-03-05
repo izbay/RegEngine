@@ -13,6 +13,7 @@ public class SiegeEnginePlugin extends JavaPlugin {
 	@Override
 	public void onEnable() {
 		getServer().getPluginManager().registerEvents(new PlayerListener(), this);
+		getServer().getPluginManager().registerEvents(new WeaponListener(), this);
 	}
 	
 }
