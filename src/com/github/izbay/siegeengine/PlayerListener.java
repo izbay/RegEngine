@@ -27,6 +27,7 @@ import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.vehicle.VehicleBlockCollisionEvent;
 import org.bukkit.event.vehicle.VehicleMoveEvent;
+import org.bukkit.util.Vector;
 
 public class PlayerListener implements Listener{
 	SiegeEnginePlugin plugin = (SiegeEnginePlugin)Bukkit.getServer().getPluginManager().getPlugin("SiegeEngine");
@@ -37,14 +38,17 @@ public class PlayerListener implements Listener{
 		Player p = e.getPlayer();
 		if(e.getAction()==Action.RIGHT_CLICK_BLOCK &&
 				e.getClickedBlock().getType() == Material.ANVIL &&
-				e.getClickedBlock().getLocation().add(0,-1,0).getBlock().getType() == Material.HOPPER &&
+				e.getClickedBlock().getLocation().add(0,-1,0).getBlock().getType() == Material.CAULDRON &&
 				p.getItemInHand().getType() == Material.FLINT_AND_STEEL){
 			
 			p.getWorld().playSound(p.getLocation(), Sound.IRONGOLEM_DEATH, 1, 1);
 			e.getClickedBlock().setType(Material.AIR);
 			e.getClickedBlock().getLocation().add(0,-1,0).getBlock().setType(Material.AIR);
+			Location target = e.getClickedBlock().getLocation().add(0, 0, 0);
 			
-			Minecart minecart = (Minecart) p.getWorld().spawnEntity(e.getClickedBlock().getLocation().add(0, 0, 0), EntityType.MINECART);
+			// Ensure that all carts are on the same yaw coord system.
+			target.setYaw(0);
+			Minecart minecart = (Minecart) p.getWorld().spawnEntity(target, EntityType.MINECART);
 			setData(minecart, Material.ANVIL, 5);
 		}
     }
@@ -53,8 +57,10 @@ public class PlayerListener implements Listener{
 	private void cancelRide(PlayerInteractEntityEvent e){
 		//TODO: differentiate minecarts and rams.
 		if(e.getRightClicked().getType() == EntityType.MINECART){
+			System.out.println(e.getRightClicked().getLocation().getYaw());
 			e.setCancelled(true);
 		}
+		//TODO: Move the climb slope code to here. Take it out of collision for controllability.
 	}
 	
 	@EventHandler
@@ -62,16 +68,42 @@ public class PlayerListener implements Listener{
 		if(e.getVehicle().getType() == EntityType.MINECART){
 			Location v = e.getVehicle().getLocation();
 			Location upLoc = e.getBlock().getLocation().add(0,1,0);
+			if(v.getBlock().getType().isSolid()){
+				e.getVehicle().teleport(v.add(0,1,0));
+			}
 			if(e.getBlock().getLocation().getBlock().getType().isSolid()){
-				//TODO: This causes issues rarely if the cart is pushed diagonally into an inner corner.
 				if(!upLoc.getBlock().getType().isSolid()){
 					reg.alter(v, Material.RAILS);
 					reg.alter(upLoc, Material.RAILS);
 				} else {
-					//TODO: Calculate Cone.
+					Double yaw = toRadians(v.getYaw());
+					int sin = (int) Math.round(Math.sin(yaw));
+					int cos = (int) Math.round(Math.cos(yaw));
+					
+					//Generate a small cone. We'll worry about multipliers and non-right angles later.
+					Vector[] vec = {
+							new Vector(0,0,0),
+							// Up Down
+							new Vector(0,1,0), new Vector(0,-1,0),
+							// Left Right
+							new Vector(0,0,-sin), new Vector(-cos,0,0),
+							new Vector(cos,0,0), new Vector(0,0,sin),
+							// Forward
+							new Vector(sin,0,0), new Vector(sin*2,0,0),
+							new Vector(0,0,cos), new Vector(0,0,cos*2)};
+					
+					for(int i=0; i<vec.length; i++){
+						Location test = new Location(upLoc.getWorld(), upLoc.getX(), upLoc.getY(), upLoc.getZ());
+						test = test.add(vec[i]);
+						reg.alter(test, Material.AIR);
+					}
 				}
 			}
 		}
+	}
+	
+	private double toRadians(double yaw){
+		return (270-yaw) * Math.PI / 180;
 	}
 	
 	//TODO: Detect downhill slope and set tracks.
@@ -89,6 +121,7 @@ public class PlayerListener implements Listener{
 		*/
 	}
 
+	//TODO: Degenericize this. It's 'borrowed' from DiagonalBlocks, and much of it is unneeded.
 	@SuppressWarnings("deprecation")
 	private void setData(Minecart minecart, Material block, int data)
 	  {
@@ -100,7 +133,6 @@ public class PlayerListener implements Listener{
 	    NBTTagCompound minecartTag = getCompound(rawMinecart);
 	    minecartTag.setByte("CustomDisplayTile", (byte)1);
 	    minecartTag.setInt("DisplayTile", block.getId());
-	    //minecartTag.setInt("DisplayData", 0);
 	    minecartTag.setInt("DisplayOffset", data);
 	    
 	    setCompound(rawMinecart, minecartTag);
