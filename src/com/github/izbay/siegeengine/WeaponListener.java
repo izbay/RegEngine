@@ -56,12 +56,7 @@ public class WeaponListener implements Listener {
 					}
 				}
 			}
-			else if(e.getFrom().add(0,-1,0).getBlock().getType().isSolid() &&
-						!e.getTo().add(0,-1,0).getBlock().getType().isSolid() &&
-						e.getTo().add(0,-2,0).getBlock().getType().isSolid()){
-					reg.alter(e.getFrom(), Material.RAILS);
-					reg.alter(e.getTo().add(0,-1,0), Material.RAILS);
-				}
+			
 		}
 	}
 	
