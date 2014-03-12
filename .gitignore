@@ -1,0 +1,5 @@
+/bin
+.project
+.classpath
+.gitignore~
+/src/com/github/izbay/regengine/bk
