@@ -5,6 +5,7 @@ import org.bukkit.event.*;
 import org.bukkit.event.vehicle.*;
 import org.bukkit.util.*;
 import org.bukkit.*;
+
 import com.github.izbay.regengine.*;
 import com.github.izbay.util.Util;
 
@@ -18,6 +19,8 @@ public class RamMoveListener implements Listener {
 	{
 		plugin.getServer().getPluginManager().registerEvents(this, plugin);
 	}*/
+	RegEnginePlugin reg = (RegEnginePlugin)Bukkit.getServer().getPluginManager().getPlugin("RegEngine");
+	
 
 	@EventHandler
 	public void ramMoveHandler(final VehicleMoveEvent ev) {
@@ -34,8 +37,8 @@ public class RamMoveListener implements Listener {
 					&& !Util.isSolid(Util.getBlockBelow(vTo)) 
 					&& Util.isSolid(Util.getBlockBelow(Util.getBlockBelow(vTo))) 
 			) {
-				RegEnginePlugin.getInstance().alter(vFrom, Material.RAILS);
-				RegEnginePlugin.getInstance().alter(Util.getBlockBelow(vTo), Material.RAILS);
+				reg.alter(vFrom, Material.RAILS);
+				reg.alter(Util.getBlockBelow(vTo), Material.RAILS);
 			}// if
 		}// if
 	}// ramMoveHandler()
