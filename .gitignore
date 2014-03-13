@@ -1,5 +1,8 @@
 /bin
 .project
 .classpath
-.gitignore~
 /src/com/github/izbay/regengine/bk
+/src/cljengine/*.bk*
+*~
+*.swp
+.gitignore
