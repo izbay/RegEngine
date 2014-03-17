@@ -32,7 +32,7 @@ public class BlockImage
 	private final BlockState stateImage;
 	/**
 	 * It may not be necessary or beneficial to keep a reference to the target restoration time with each block.
-	 * On the other hand, if we start mergine REG EN regions, it could be very useful.
+	 * On the other hand, if we start merging REG EN regions, it could be very useful.
 	 */
 	//private final int restorationTargetTime; // Not used yet
 	
