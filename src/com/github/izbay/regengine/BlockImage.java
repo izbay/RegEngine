@@ -7,11 +7,19 @@ package com.github.izbay.regengine;
 
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockState;
 import org.bukkit.util.BlockVector;
 
 /**
+ * The equality question. It is of great importance to have a working equivalence test on blocks.  The current one, which tests whether their BlockStates are equal(), works quite well, but I doubt it will do what we want in every possible case.
+ * 
+ * Issues noted with BlockState.update():
+ * - Vehicles aren't removed when blocks around them are destroyed--they just fall.  Nor are they removed during regeneration--they're buried.
+ * - It stores whether a Detector Rail is activated (and probably a pressure plate, too), which state depends on the Entity perched atop.  Stationary Vehicles I'm considering treating, but not creatures.
+ * - There's an issue with a Cactus block at <-207,69,287> on my test server.  Sometimes it reports failure after regeneration when, by appearances, it regen'd fine.
+ * 
  * @author jdjs
  *
  */
@@ -22,17 +30,29 @@ public class BlockImage
 	 */
 	private final Location blockLoc;
 	private final BlockState stateImage;
-	private final int restorationTargetTime; // Not used yet
+	/**
+	 * It may not be necessary or beneficial to keep a reference to the target restoration time with each block.
+	 * On the other hand, if we start mergine REG EN regions, it could be very useful.
+	 */
+	//private final int restorationTargetTime; // Not used yet
 	
 
-	public BlockImage(final Block block, final int regenTime) {
+	public BlockImage(final Block block /*, final int regenTime*/) {
 		super();
 		blockLoc = block.getLocation();
 		stateImage = block.getState();
-		restorationTargetTime = regenTime;
-		assert(regenTime >= blockLoc.getWorld().getFullTime());
+	//	restorationTargetTime = regenTime;
+	//	assert(regenTime >= blockLoc.getWorld().getFullTime());
 	}// ctor
 	
+	public BlockImage(final BlockState bs /*, final int regenTime*/) {
+		super();
+		stateImage = bs;
+		blockLoc = bs.getLocation();
+		//restorationTargetTime = regenTime;
+		//assert(regenTime >= blockLoc.getWorld().getFullTime());
+	}// ctor
+
 	/**
 	 * @return the Location
 	 */
@@ -42,13 +62,21 @@ public class BlockImage
 	 * @return the BlockState
 	 */
 	public BlockState getBlockState() { return stateImage; }
-	/**
-	 * It may not be necessary or beneficial to keep a reference to the target restoration time with each block.
-	 * On the other hand, if we start mergine REG EN regions, it could be very useful.
-	 */
 	
 	public boolean isRestored() { return stateImage.equals(blockLoc.getBlock().getState()) ; }// isRestored()
 	
+	public boolean equals(final BlockImage other) {
+		return stateImage.equals(other.stateImage);
+	}// equals()
+
+	public boolean equals(final Block block) {
+		return stateImage.equals(block.getState());
+	}// equals()
+	
+	public boolean equals(final BlockState other) {
+		return stateImage.equals(other);
+	}// equals()
+
 	/**
 	 * A block is placed back into the world.
 	 * @return the calling object
@@ -66,4 +94,6 @@ public class BlockImage
 	
 	public BlockVector getVector()
 	{	return new BlockVector(blockLoc.getBlockX(), blockLoc.getBlockY(), blockLoc.getBlockZ()); }
+	
+	public World getWorld() { return blockLoc.getWorld(); }
 }// BlockImage
