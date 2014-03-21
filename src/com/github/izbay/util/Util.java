@@ -18,7 +18,7 @@ import org.bukkit.util.Vector;
  * @author J. Jakes-Schauer
  *
  */
-public class Util 
+public abstract class Util 
 {
 		public static BlockVector getBlockVector(final Location l) {
 			return new BlockVector((int) l.getX(), (int) l.getY(),

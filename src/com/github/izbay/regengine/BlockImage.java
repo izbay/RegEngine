@@ -19,6 +19,9 @@ import org.bukkit.util.BlockVector;
  * - Vehicles aren't removed when blocks around them are destroyed--they just fall.  Nor are they removed during regeneration--they're buried.
  * - It stores whether a Detector Rail is activated (and probably a pressure plate, too), which state depends on the Entity perched atop.  Stationary Vehicles I'm considering treating, but not creatures.
  * - There's an issue with a Cactus block at <-207,69,287> on my test server.  Sometimes it reports failure after regeneration when, by appearances, it regen'd fine.
+ * 	 - Yeah, I can't reproduce this any more after messing up my block arrangement.
+ * - It doesn't catch the contents of a Flowerpot.
+ * - Bad one: Water source blocks aren't equal after regeneration; if the routine doesn't stop phys. events, it can loop forever.  This opens a breach in my restoration guarantee.
  * 
  * @author jdjs
  *
