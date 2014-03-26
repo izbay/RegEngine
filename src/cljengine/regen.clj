@@ -290,7 +290,7 @@ If *log-physics-events* is set to :record, this will also be stored into the *ph
    (fn [blocks & _]
      (if (empty? blocks) [BlockImage]  ; hack
        (distinct (vec (map class blocks))))))
-  (defmethod regenerate-region [BlockImage] [images & {:keys [delay, warn-players, suppress-physics, bottom-up, world]
+  (defmethod regenerate-region [BlockImage] [images & {:keys [delay, warn-players, suppress-physics, bottom-up, world, plugin]
                                                          :or {delay regen-total-delay,
                                                               warn-players true,
                                                               bottom-up true,
@@ -298,132 +298,134 @@ If *log-physics-events* is set to :record, this will also be stored into the *ph
     "Expects a collection of BlockImages.
 If :warn-players is true (default), the PC-warner system is used.  TODO: The timing should be better controlled.  If the restoration is nowhere near in time, we don't need to warn constantly.
 If :bottom-up is log.true, we'll sort the blocks lowest-to-highest--other factors notwithstanding, this is most likely to meet dependencies.
-If :suppress-physics is set, we'll try to do just that..."
+If :suppress-physics is set, we'll try to do just that...
+:world isn't used, but needs to be.
+:plugin is set to *plugin* by default."
     ;; If they aren't going, we start (1) the physics suppressor; (2) the player on-move warner:
     ;(debug-announce "Warning? %s")
-    (let [images (if-not bottom-up images
-                         (sort (fn [i1 i2] (apply compare-vectors (map get-vector [i1 i2]))) images))]
-      (ensure-regengine-handlers)
-      (when warn-players
-        (swap! regengine-event-handlers assoc-in ["player.player-move" :active] true)
-        (assert* (get-in @regengine-event-handlers ["player.player-move" :active])))
-      ;; Make sure that, for now, this is disabled:
-      (swap! regengine-event-handlers assoc-in ["block.block-physics" :active] false)
-      (assert* (not (get-in @regengine-event-handlers ["block.block-physics" :active])))
-      (assert* (every? (partial instance? BlockImage) images) "Bad types: %s" images)
-     (assert* (integer? delay))
-     (assert* (> delay 0))
+    (let [plugin (or plugin *plugin*)]
+      (let [images (if-not bottom-up images
+                           (sort (fn [i1 i2] (apply compare-vectors (map get-vector [i1 i2]))) images))]
+        (ensure-regengine-handlers)
+        (when warn-players
+          (swap! regengine-event-handlers assoc-in ["player.player-move" :active] true)
+          (assert* (get-in @regengine-event-handlers ["player.player-move" :active])))
+        ;; Make sure that, for now, this is disabled:
+        (swap! regengine-event-handlers assoc-in ["block.block-physics" :active] false)
+        (assert* (not (get-in @regengine-event-handlers ["block.block-physics" :active])))
+        (assert* (every? (partial instance? BlockImage) images) "Bad types: %s" images)
+              (assert* (integer? delay))
+              (assert* (> delay 0))
                                         ;(debug-println images)
-     (cond*
-      [(empty? images)
-       (debug-announce "Can't regen empty list of blocks.")
-       nil]
-      [:else
-       ;; It starts for real at this point:
-       (let [regen-blocks-map (zipmap (map (comp get-block-vector get-location) images) images)
-             cur-time (get-full-time)
-             regen-time (+ cur-time delay)]
-         (assert* (not (contains? @regen-batch-regions-active regen-blocks-map)) "Uh-oh--this set of items is still in the REG EN set!")
-         ;; Modifying global:
-         (swap! regen-batch-regions-active conj regen-blocks-map)
-         (assert* (contains? @regen-batch-regions-active regen-blocks-map))
-         (debug-announce "@ %s: Queueing restoration task to fire in %s ticks." (get-full-time) delay)
-         ;; Concurrency?
-         (let [warning-task (promise)]
-           ;; Primary restoration handler:
-           (delayed-task *plugin*
-                         (fn []
-                           (debug-announce "@ %s: Firing regen task." (get-full-time))
-                           ;; TODO: This might be a good spot to try a transaction...
-                           (assert* (contains? @regen-batch-regions-active regen-blocks-map))
-                           (when suppress-physics
-                             (swap! regengine-event-handlers assoc-in ["block.block-physics" :active] true)
-                             (assert* (get-in @regengine-event-handlers ["block.block-physics" :active])))
-                           (loop* [n 1]
-                                  (abort-on-emergency-break!)
-                                  (debug-announce "Starting restoration pass %s: %s." n (get-full-time))
-                                  (if (not-every? true?
-                                                  (doall (map (fn [b]
-                                                                (debug-announce "@ %s: Image of type %s at %s.  Restored? %s" (get-full-time) (.getType b) (format-vector (get-vector b)) (.isRestored b))
-                                                                (if (.isRestored b) true
-                                                                    (do
-                                                                      (debug-announce "Restoring %s: %s -> %s." b (get-type (get-block-at (get-location b))) (get-type b))
-                                                                      (.restore b)
-                                                                      false)))
-                                                              (vals regen-blocks-map))))
-                                    (recur (inc n))
-                                    (debug-announce "Done with restoration loop after %s passes!" n)))
-                           (debug-println "Dequeueing this REG EN batch.")
-                           (swap! regen-batch-regions-active disj regen-blocks-map)
-                           (when warn-players
-                             (cond*
-                              ((not (realized? warning-task))
-                               (debug-announce "Warning: The warning-issuing repeated-task seems not to have been started."))
-                              ((not (task-active? @warning-task))
-                               (debug-announce "Warning: The warner got stopped."))
-                              (:else (cancel-task @warning-task)))
-                             ;; If all regen regions are done, we can deactivate the warning stuff.  TODO: Move this outside of the individual batch handler.
-                             (when (regengine-done?)
-                               (swap! regengine-event-handlers assoc-in ["player.player-move" :active] false)
-                               (assert* (not (get-in @regengine-event-handlers ["player.player-move" :active]))))
-                             (swap! regengine-event-handlers assoc-in ["block.block-physics" :active] false)
-                             (assert* (not (get-in @regengine-event-handlers ["block.block-physics" :active])))
-                             (assert* (not (contains? @regen-batch-regions-active regen-blocks-map)))
-                             ;; Remove players from considertation for the movement warner if they're no longer in a REG EN zone:
-                             (doseq [pc (online-players)]
-                               (when (and (player-flagged-in-regen-area? pc)
-                                          (not (player-in-regen-area? pc)))
-                                 (swap! players-in-regen-zone disj pc)
-                                 (assert* (not (player-flagged-in-regen-area? pc)))))))
-                         delay)
-           ;; Unless deinstructed, start the warner loops if they aren't running:
-           (when warn-players
-             (debug-println "(Re)starting player warner.")
-             (swap! regengine-event-handlers assoc-in ["player.player-move" :active] true)
-             (assert* (get-in @regengine-event-handlers ["player.player-move" :active]))
-             ;; Always keep a promise!
-             (assert* (not (realized? warning-task)))
-                                        ;(debug-println "HEre.")
-             (let [^BukkitTask warning-task' (repeated-task *plugin*
-                                                            (fn []
-                                                              (try
-                                                                ;; Warn every player in zone:
-                                                                (doseq [pc (online-players)]
-                                                                  ;; TODO: Do we use a check to only warn players if the impending block is *solid*?
-                                                                  ;; TODO: This also could be done more efficiently with vectors.
-                                                                  (let [occ-blocks (get-player-space pc)
-                                                                        isec-map (select-keys regen-blocks-map occ-blocks)
-                                                                        ;; Ignore air blocks:
-                                                                        isec-not-air (remove air? (vals isec-map))]
-                                                                    (assert* (every? (partial instance? Vector) occ-blocks))
-                                                                    (when-not (empty? isec-not-air)
-                                                                      (send-msg pc (let [sec (ticks-to-seconds (- regen-time (get-full-time)))]
-                                                                                     (format "A block at your position is going to reappear in %s second%s." sec (pluralizes? sec)))))
-                                                                    ;; TODO: Show VFX to players "near enough":
-                                                                    #_(when (some #(< (taxicab-distance % block)
-                                                                                      *regen-vfx-distance*)
-                                                                                  ;; TODO: Check player's world.
-                                                                                  (online-players))
-                                                                        ;; NB: I'm referring directly to a member var here:
-                                                                        (when (.. RegEnginePlugin (getInstance) doParticles)
+              (cond*
+               [(empty? images)
+                (debug-announce "Can't regen empty list of blocks.")
+                nil]
+               [:else
+                ;; It starts for real at this point:
+                (let [regen-blocks-map (zipmap (map (comp get-block-vector get-location) images) images)
+                      cur-time (get-full-time)
+                      regen-time (+ cur-time delay)]
+                  (assert* (not (contains? @regen-batch-regions-active regen-blocks-map)) "Uh-oh--this set of items is still in the REG EN set!")
+                  ;; Modifying global:
+                  (swap! regen-batch-regions-active conj regen-blocks-map)
+                  (assert* (contains? @regen-batch-regions-active regen-blocks-map))
+                  (debug-announce "@ %s: Queueing restoration task to fire in %s ticks." (get-full-time) delay)
+                  ;; Concurrency?
+                  (let [warning-task (promise)]
+                    ;; Primary restoration handler:
+                    (delayed-task plugin
+                                  (fn []
+                                    (debug-announce "@ %s: Firing regen task." (get-full-time))
+                                    ;; TODO: This might be a good spot to try a transaction...
+                                    (assert* (contains? @regen-batch-regions-active regen-blocks-map))
+                                    (when suppress-physics
+                                      (swap! regengine-event-handlers assoc-in ["block.block-physics" :active] true)
+                                      (assert* (get-in @regengine-event-handlers ["block.block-physics" :active])))
+                                    (loop* [n 1]
+                                           (abort-on-emergency-break!)
+                                           (debug-announce "Starting restoration pass %s: %s." n (get-full-time))
+                                           (if (not-every? true?
+                                                           (doall (map (fn [b]
+                                                                         (debug-announce "@ %s: Image of type %s at %s.  Restored? %s" (get-full-time) (.getType b) (format-vector (get-vector b)) (.isRestored b))
+                                                                         (if (.isRestored b) true
+                                                                             (do
+                                                                               (debug-announce "Restoring %s: %s -> %s." b (get-type (get-block-at (get-location b))) (get-type b))
+                                                                               (.restore b)
+                                                                               false)))
+                                                                       (vals regen-blocks-map))))
+                                             (recur (inc n))
+                                             (debug-announce "Done with restoration loop after %s passes!" n)))
+                                    (debug-println "Dequeueing this REG EN batch.")
+                                    (swap! regen-batch-regions-active disj regen-blocks-map)
+                                    (when warn-players
+                                      (cond*
+                                       ((not (realized? warning-task))
+                                        (debug-announce "Warning: The warning-issuing repeated-task seems not to have been started."))
+                                       ((not (task-active? @warning-task))
+                                        (debug-announce "Warning: The warner got stopped."))
+                                       (:else (cancel-task @warning-task)))
+                                      ;; If all regen regions are done, we can deactivate the warning stuff.  TODO: Move this outside of the individual batch handler.
+                                      (when (regengine-done?)
+                                        (swap! regengine-event-handlers assoc-in ["player.player-move" :active] false)
+                                        (assert* (not (get-in @regengine-event-handlers ["player.player-move" :active]))))
+                                      (swap! regengine-event-handlers assoc-in ["block.block-physics" :active] false)
+                                      (assert* (not (get-in @regengine-event-handlers ["block.block-physics" :active])))
+                                      (assert* (not (contains? @regen-batch-regions-active regen-blocks-map)))
+                                      ;; Remove players from considertation for the movement warner if they're no longer in a REG EN zone:
+                                      (doseq [pc (online-players)]
+                                        (when (and (player-flagged-in-regen-area? pc)
+                                                   (not (player-in-regen-area? pc)))
+                                          (swap! players-in-regen-zone disj pc)
+                                          (assert* (not (player-flagged-in-regen-area? pc)))))))
+                                  delay)
+                    ;; Unless deinstructed, start the warner loops if they aren't running:
+                    (when warn-players
+                      (debug-println "(Re)starting player warner.")
+                      (swap! regengine-event-handlers assoc-in ["player.player-move" :active] true)
+                      (assert* (get-in @regengine-event-handlers ["player.player-move" :active]))
+                      ;; Always keep a promise!
+                      (assert* (not (realized? warning-task)))
+                      (let [^BukkitTask warning-task' (repeated-task plugin
+                                                                     (fn []
+                                                                       (try
+                                                                         ;; Warn every player in zone:
+                                                                         (doseq [pc (online-players)]
+                                                                           ;; TODO: Do we use a check to only warn players if the impending block is *solid*?
+                                                                           ;; TODO: This also could be done more efficiently with vectors.
+                                                                           (let [occ-blocks (get-player-space pc)
+                                                                                 isec-map (select-keys regen-blocks-map occ-blocks)
+                                                                                 ;; Ignore air blocks:
+                                                                                 isec-not-air (remove air? (vals isec-map))]
+                                                                             (assert* (every? (partial instance? Vector) occ-blocks))
+                                                                             (when-not (empty? isec-not-air)
+                                                                               (send-msg pc (let [sec (ticks-to-seconds (- regen-time (get-full-time)))]
+                                                                                              (format "A block at your position is going to reappear in %s second%s." sec (pluralizes? sec)))))
+                                                                             ;; TODO: Show VFX to players "near enough":
+                                                                             #_(when (some #(< (taxicab-distance % block)
+                                                                                               *regen-vfx-distance*)
+                                                                                           ;; TODO: Check player's world.
+                                                                                           (online-players))
+                                                                                 ;; NB: I'm referring directly to a member var here:
+                                                                                 (when (.. RegEnginePlugin (getInstance) doParticles)
                                         ;(.. RegEnginePlugin (getInstance) doParticles)
-                                                                          ;(debug-announce "VFX!")
-                                                                          (visual-warning-at block)))))
-                                                                ;; Viz warning as well:
-                                                                (when (.. RegEnginePlugin (getInstance) doParticles)
-                                                                  (doall (map (comp visual-warning-at get-state) ;(remove air? (vals regen-blocks-map))
-                                                                              (vals regen-blocks-map) )))
-                                                                (catch Error e
-                                                                  (debug-announce "Exception thrown within the on-tick warner.")
+                                        ;(debug-announce "VFX!")
+                                                                                   (visual-warning-at block)))))
+                                                                         ;; Viz warning as well:
+                                                                         (when (.. RegEnginePlugin (getInstance) doParticles)
+                                                                           (doall (map (comp visual-warning-at get-state) ;(remove air? (vals regen-blocks-map))
+                                                                                       (vals regen-blocks-map) )))
+                                                                         (catch Error e
+                                                                           (debug-announce "Exception thrown within the on-tick warner.")
                                         ;(abort-func)
-                                                                  (throw e))))
-                                                            ;; Task t2's timing params:
-                                                            0 ;; TODO: Reinstate two-phase warning; for now we don't use; wait
-                                                            regen-warning-period)]
-               (assert* (instance? BukkitTask warning-task'))
-               (deliver warning-task warning-task')))))
-       ;; retval
-       [(count images) delay]])))
+                                                                           (throw e))))
+                                                                     ;; Task t2's timing params:
+                                                                     0 ;; TODO: Reinstate two-phase warning; for now we don't use; wait
+                                                                     regen-warning-period)]
+                        (assert* (instance? BukkitTask warning-task'))
+                        (deliver warning-task warning-task')))))
+                ;; retval
+                [(count images) delay]]))))
   (defmethod regenerate-region :default [blocks? & rest]
     (assert* (not-empty blocks?))
     (let [images (clojure.core/map #(BlockImage. (get-state %)) blocks?)
