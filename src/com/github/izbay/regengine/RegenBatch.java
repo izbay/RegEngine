@@ -7,7 +7,7 @@ public class RegenBatch implements RegenBatchIface
 {
 	private final World world;
 	private final int restorationTime;
-	private BlockImage[] blocks;
+//	private BlockImage[] blocks;
 
 	/* (non-Javadoc)
 	 * @see com.github.izbay.regengine.RegenBatchIface#getWorld()
@@ -27,7 +27,7 @@ public class RegenBatch implements RegenBatchIface
 	 */
 	public RegenBatch(final BlockImage[] blocks, final World world, final int targetTime) {
 		super();
-		this.blocks = blocks;
+//		this.blocks = blocks;
 		this.world = world;
 		this.restorationTime = targetTime;
 	}// ctor

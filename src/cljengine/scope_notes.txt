@@ -1,0 +1,7 @@
+This binding does not cross threads:
+(with-local-vars [gas 99] (register-event *plugin* "player.player-move" (fn [_] (println @gas))))
+It reports 'unnamed' and 'Unbound'.
+
+This and (binding) do the same thing--the original value is
+unreplaced.
+(with-redefs [gas 99] (register-event *plugin* "player.player-move" (fn [_] (println gas))))

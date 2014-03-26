@@ -86,6 +86,9 @@ public abstract class Util
 		public static Vector add(final Vector v, final double x, final double y, final double z)
 		{	return new Vector(v.getX()+x, v.getY()+y, v.getZ()+z); }
 
+		public static Location add(final Location l, final double x, final double y, final double z)
+		{ return l.clone().add(x,y,z); }
+		
 		public static BlockVector add(final BlockVector v, final int x, final int y, final int z)
 		{	return new BlockVector(v.getX()+x, v.getY()+y, v.getZ()+z); }
 		

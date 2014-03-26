@@ -3,3 +3,5 @@
 .classpath
 .gitignore~
 /src/com/github/izbay/regengine/bk
+/src/cljengine/*.bk*
+/src/cljengine/*.*~
