@@ -66,13 +66,15 @@ public class RegEnginePlugin extends JavaPlugin {
 		
 		@SuppressWarnings("deprecation")
 		public void alter(Location l, Material m){
-			Material backup = l.getBlock().getType();
-			
-			if(backup != m && !blockMap.containsKey(l)){
-				blockMap.put(l, backup);
-				dataMap.put(l, l.getBlock().getData());
-				l.getBlock().setType(m);
-				regen(l);
+			Location normal = Util.normalizeLocation(l);
+			Material backup = normal.getBlock().getType();
+			if(backup != m){
+				if(!blockMap.containsKey(normal)){
+					blockMap.put(normal, backup);
+					dataMap.put(normal, normal.getBlock().getData());
+					normal.getBlock().setType(m);
+					regen(normal);	
+				}
 			}
 		}
 		
@@ -89,7 +91,7 @@ public class RegEnginePlugin extends JavaPlugin {
 						public void run() {
 							l.getWorld().playEffect(l, Effect.MOBSPAWNER_FLAMES, 2004);
 						}
-					}, 200L-i);
+					}, 2000L-i);
 				}
 			}
 			
@@ -101,7 +103,7 @@ public class RegEnginePlugin extends JavaPlugin {
 				    blockMap.remove(l);
 				    dataMap.remove(l);
 				}
-			}, 200L);
+			}, 2000L);
 		}
 }
 
