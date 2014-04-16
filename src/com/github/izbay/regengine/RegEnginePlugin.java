@@ -16,8 +16,7 @@ import com.github.izbay.util.*;
 
 public class RegEnginePlugin extends JavaPlugin {
 		
-		private HashMap<Location, Material> blockMap = new HashMap<Location,Material>();
-		private HashMap<Location, Byte> dataMap = new HashMap<Location,Byte>();
+		private HashMap<Location, SerializedBlock> blockMap = new HashMap<Location,SerializedBlock>();
 		private FileConfiguration config;
 		private Boolean doParticles;
 		
@@ -43,10 +42,13 @@ public class RegEnginePlugin extends JavaPlugin {
 		
 		@Override
 		public void onDisable() {
+			//TODO: Write out every map to file.
 		}
 
 		@Override
 		public void onEnable() {
+			// TODO: Read in maps from file to memory.
+			
 			// Load config
 			this.saveDefaultConfig();
 			config = this.getConfig();
@@ -65,14 +67,12 @@ public class RegEnginePlugin extends JavaPlugin {
 			alter(plugin, l, Material.AIR);
 		}
 		
-		@SuppressWarnings("deprecation")
 		public void alter(Plugin plugin, Location l, Material m){
 			Location normal = Util.normalizeLocation(l);
 			Material backup = normal.getBlock().getType();
 			if(backup != m){
 				if(!blockMap.containsKey(normal)){
-					blockMap.put(normal, backup);
-					dataMap.put(normal, normal.getBlock().getData());
+					blockMap.put(normal, new SerializedBlock(normal.getBlock()));
 					normal.getBlock().setType(m);
 					regen(normal);	
 				}
@@ -99,10 +99,10 @@ public class RegEnginePlugin extends JavaPlugin {
 			this.getServer().getScheduler().scheduleSyncDelayedTask(this, new Runnable() {
 				@SuppressWarnings("deprecation")
 				public void run() {
-					l.getBlock().setType(blockMap.get(l));
-				    l.getBlock().setData(dataMap.get(l));
+					SerializedBlock restore = blockMap.get(l);
+					l.getBlock().setType(Material.getMaterial(restore.type));
+				    l.getBlock().setData(restore.data);
 				    blockMap.remove(l);
-				    dataMap.remove(l);
 				}
 			}, 2000L);
 		}
