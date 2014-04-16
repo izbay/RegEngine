@@ -7,6 +7,7 @@ import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.Vector;
@@ -60,12 +61,12 @@ public class RegEnginePlugin extends JavaPlugin {
 		
 		
 		
-		public void alter(Location l){
-			alter(l, Material.AIR);
+		public void alter(Plugin plugin, Location l){
+			alter(plugin, l, Material.AIR);
 		}
 		
 		@SuppressWarnings("deprecation")
-		public void alter(Location l, Material m){
+		public void alter(Plugin plugin, Location l, Material m){
 			Location normal = Util.normalizeLocation(l);
 			Material backup = normal.getBlock().getType();
 			if(backup != m){
@@ -78,11 +79,11 @@ public class RegEnginePlugin extends JavaPlugin {
 			}
 		}
 		
-		public void alter(final Vector v, final Material m)
-		{	alter(Util.getLocation(v), m); }
+		public void alter(Plugin plugin, final Vector v, final Material m)
+		{	alter(plugin, Util.getLocation(v), m); }
 		
-		public void alter(final Block b, final Material m)
-		{	alter(b.getLocation(), m); }
+		public void alter(Plugin plugin, final Block b, final Material m)
+		{	alter(plugin, b.getLocation(), m); }
 		
 		private void regen(final Location l){
 			if(doParticles){
