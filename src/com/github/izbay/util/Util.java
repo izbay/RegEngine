@@ -3,6 +3,9 @@
  */
 package com.github.izbay.util;
 
+import java.util.HashSet;
+import java.util.Set;
+
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.World;
@@ -128,8 +131,15 @@ public abstract class Util
         { return getBlockAt(new Vector(b.getX(), b.getY()-1, b.getZ())); }
 		
 		public static BlockFace[] adjacentDirections()
+		{ return new BlockFace[] { BlockFace.NORTH, BlockFace.SOUTH, BlockFace.EAST, BlockFace.WEST }; }
+		
+		public static Set<Block> getAdjacentBlocks(final Block b)
 		{
-			return new BlockFace[] { BlockFace.NORTH, BlockFace.SOUTH, BlockFace.EAST, BlockFace.WEST };
+			HashSet<Block> s = new HashSet<Block>();
+			for(BlockFace dir : adjacentDirections())
+			{ s.add(Util.add(b,dir)); }
+			assert(s.size() == 4);
+			return s;
 		}
 
 		private Util() {}

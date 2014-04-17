@@ -15,6 +15,13 @@ public class DependingBlockSet
 {
 	public final Map<BlockVector,DependingBlock> blocks;
 	
+	// Default constructor:
+	DependingBlockSet()
+	{
+		super();
+		this.blocks = new HashMap<BlockVector,DependingBlock>();
+	}// ctor
+	
 	// Merging constructor.  Does not modify its args.
 	DependingBlockSet(final DependingBlockSet s1, final DependingBlockSet s2)
 	{

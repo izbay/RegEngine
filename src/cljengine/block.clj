@@ -28,7 +28,7 @@
                           ;; can't pull in all of cljminecraft.player without conflict:
                                         ;[player :only [send-msg]]
                           )
-   (cljengine mc
+   (cljengine ;mc
               [tasks :exclude [map]]
               [events :exclude [map]]))
   (:import (clojure.lang Keyword
@@ -73,7 +73,8 @@
            (com.github.izbay.regengine.block Action
                                              DependingBlock
                                              VineDependingBlock
-                                             DependeningBlockSet)))
+                                             DependingBlockSet)
+           (com.github.izbay.util Util)))
 
 ;; TODO: Should the metatag be ':set' i/s/o 'clojure.core/set'?
 (defmacro def-blocktype-set [name & body]

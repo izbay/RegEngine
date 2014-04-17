@@ -9,6 +9,7 @@ import java.util.Map;
 import java.util.Set;
 
 import org.bukkit.Material;
+import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.material.MaterialData;
 import org.bukkit.material.Vine;
@@ -35,9 +36,12 @@ public class VineDependingBlock extends DependingBlock
 	 */
 	public VineDependingBlock(BlockImage block, Action action) {
 		super(block, action);
+		if(block.getType() != Material.VINE)
+		{	throw new IllegalArgumentException(); }
 		vineCoveredFaces = new HashSet<BlockFace>();
 		independentFaces = new HashMap<BlockFace,Set<Orientation>>();
-		final boolean isVineAbove = Util.getBlockAbove(block).getType() == Material.VINE;
+		final Block bAbove = Util.getBlockAbove(block);
+		final boolean isVineAbove = bAbove.getType() == Material.VINE;
 		for(BlockFace dir : Util.adjacentDirections())
 		{
 			final MaterialData mat = block.getBlockState().getData();
@@ -46,7 +50,8 @@ public class VineDependingBlock extends DependingBlock
 				vineCoveredFaces.add(dir);
 				independentFaces.put(dir, EnumSet.of(Orientation.BESIDE));
 				assert(independentFaces.get(dir).contains(Orientation.BESIDE));
-				if(isVineAbove)
+				// Check whether there's a vine above to provide support:
+				if(isVineAbove && ((Vine)(bAbove.getState().getData())).isOnFace(dir))
 				{	
 					independentFaces.get(dir).add(Orientation.ABOVE);
 					assert(independentFaces.get(dir).contains(Orientation.ABOVE));
@@ -93,6 +98,7 @@ public class VineDependingBlock extends DependingBlock
 			{	this.independentFaces.remove(dir); }// else
 		}// for
 			
+		// Compute: If there are no independent faces remaining, the block will have no support and should be destroyed.
         if(this.independentFaces.isEmpty())
         {	this.action = Action.DESTROY; }// if	
 	}// ctor
