@@ -7,8 +7,12 @@ import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.block.Block;
+import org.bukkit.block.BlockFace;
+import org.bukkit.block.BlockState;
 import org.bukkit.util.BlockVector;
 import org.bukkit.util.Vector;
+
+import com.github.izbay.regengine.BlockImage;
 
 /**
  * @author jdjs
@@ -24,6 +28,16 @@ public abstract class Util
 			return new BlockVector((int) l.getX(), (int) l.getY(),
 					(int) l.getZ());
 		}// getBlockVector()
+		
+		public static BlockVector getBlockVector(final Block b)
+		{	return getBlockVector(b.getLocation()); }
+
+		public static BlockVector getBlockVector(final BlockState b)
+		{	return getBlockVector(b.getLocation()); }
+
+		// For equal standing:
+		public static BlockVector getBlockVector(final BlockImage b)
+		{	return b.getBlockVector(); }
 
 		/**
 		 * @param n1
@@ -92,11 +106,31 @@ public abstract class Util
 		public static BlockVector add(final BlockVector v, final int x, final int y, final int z)
 		{	return new BlockVector(v.getX()+x, v.getY()+y, v.getZ()+z); }
 		
+		public static BlockVector add(final BlockVector v, final BlockFace direction)
+		{	return  Util.add(v, direction.getModX(), direction.getModY(), direction.getModZ()); }
+		
+		public static Block add(final Block b, final int x, final int y, final int z)
+		{	return getBlockAt(Util.add(b.getLocation(), x, y, z)); }
+
+		public static Block add(final Block b, final BlockFace direction)
+		{	return add(b, direction.getModX(), direction.getModY(), direction.getModZ()); }
+		
+		public static Block getBlockAbove(final Block b)
+		{	return add(b, 0, 1, 0); }
+		
+		public static Block getBlockAbove(final BlockImage i)
+		{	return getBlockAt(add(i.getLocation(), 0, 1, 0)); }
+		
 		public static Block getBlockBelow(final Vector v)
 		{ return getBlockAt(Util.add(v, 0, -1, 0)); }
 		
 		public static Block getBlockBelow(final Block b)
         { return getBlockAt(new Vector(b.getX(), b.getY()-1, b.getZ())); }
+		
+		public static BlockFace[] adjacentDirections()
+		{
+			return new BlockFace[] { BlockFace.NORTH, BlockFace.SOUTH, BlockFace.EAST, BlockFace.WEST };
+		}
 
 		private Util() {}
 }// Util

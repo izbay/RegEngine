@@ -21,7 +21,7 @@
                           ;; can't pull in all of cljminecraft.player without conflict:
                           [player :only [send-msg]]))
            ;; Add some Enums...
-           (:import (org.reflections Reflections)
+  (:import (org.reflections Reflections)
                     (org.bukkit Bukkit
                                 Material
                                 Location
@@ -33,7 +33,11 @@
                     (org.bukkit.entity Entity
                                        EntityType
                                        Player)
-                    (org.bukkit.metadata Metadatable)
+                    (org.bukkit.material MaterialData
+                                         Attachable)
+                    (org.bukkit.metadata Metadatable
+                                         FixedMetadataValue
+                                         LazyMetadataValue)
                     (org.bukkit.event Event
                                       Cancellable
                                       EventPriority ; Enums
@@ -73,13 +77,16 @@
 
 ;;;; id=TYPES
 ;;; id=::block-state-image, id=block-state-image
-(derive Block ::block-state-image)
-(derive BlockState ::block-state-image)
-(derive BlockImage ::block-state-image)
+(do
+  (derive Block ::block-state-image)
+  (derive BlockState ::block-state-image)
+  (derive BlockImage ::block-state-image))
+
 
 
 
 ;;;; **** <util.mc>
+;; id=util
 ;;; TODO: Move utils to util.clj.
 
 ;;;; Limit print length:
@@ -96,14 +103,22 @@
                                 (binding [*out* f]
                                   (apply #'println forms))))))
 
+(defonce ^:dynamic *debug-print-2* true)
+(defn debug-println-2 [& forms]
+  (when *debug-print-2* (apply #'println forms)))
+
 (defn disable-debug-printing []
   "Wrapper."
   (alter-var-root #'*debug-print* (constantly false))
-  (alter-var-root #'*debug-print-file* (constantly false)))
+  (alter-var-root #'*debug-print-file* (constantly false))
+  (alter-var-root #'*debug-print-2* (constantly (if *debug-print-2* false nil))))
 
 (defn enable-debug-printing []
-  "Wrapper."
-  (alter-var-root #'*debug-print* (constantly true)))
+  "Wrapper.
+Always re-enables *debug-print*.  But *debug-print-2* is treated a bit differently--it is only restored if its value is 'false'.  If it is 'nil', it is left that way."
+  (alter-var-root #'*debug-print* (constantly true))
+  (when (= *debug-print-2* false)
+    (alter-var-root #'*debug-print-2* (constantly true))))
 
 ;; I did this wrong:
 (defmacro with-debug-print-to-file-timed [filename time-limit & body]
@@ -212,6 +227,29 @@ Note that (assert*) uses an implicit (format).
          (assert* (func# var#) ~@(or assert-forms
                                      `[(format "(%s %s)." '~func-form 'var#)]))))))
 
+(defmacro illegal-arg-check [form]
+  `(when-not ~form (throw (IllegalArgumentException. (format "Illegal argument produced by form '%s.'" '~form)))))
+
+(defmacro the [type-expr expr]
+  "Attempted analogue of CL's (the) type-check macro.
+NB: Clojure type equivalence is a little... unpredictable.  You might think that something reasonable like '(isa? 5 int)' would be true, but it's not.  Use caution when type-checking primitives."
+  `(let [type-val# ~type-expr
+         expr-val# ~expr]
+    (assert* (or (isa? expr-val# type-val#)
+                 (isa? (class expr-val#) type-val#)
+                 (when (class? type-val#) (instance? type-val# expr-val#))) "Failure of (the) typecheck: Form '%s' did not match type specification '%s'." '~expr type-val#)
+    expr-val#))
+
+(definline the* ^{:doc "Deprecated.  I use the asterisk just because of my own custom of defining a macro with that name in Common Lisp."}
+  [type-expr expr]
+  `(the ~type-expr ~expr))
+
+(defmacro satisfying [pred-expr test-expr]
+  `(let [pred# ~pred-expr
+         test-val# ~test-expr]
+    (assert* (pred# test-val#) "Failure of (satisfying): Form '%s' did not satisfy '%s'." '~test-expr ~pred-expr)
+    test-val#))
+
 (defmacro cond* [fst-clause & rest-of-clauses]
   "I have *had* it with Clojure's (cond).  The Scheme style seems utterly pointless; you could simply do with a variadic (if), like Shen.
 This version accordingly requires that separate test clauses be enclosed as sequences.  Vectors, specifically, with '[]'; when in Clojure, do as Clojurians do."
@@ -285,6 +323,7 @@ This version accordingly requires that separate test clauses be enclosed as sequ
     cond*-form))
 
 
+;(defmacro define-multimethod [name])
 
 
 (defn ticks-to-seconds [t]
@@ -400,17 +439,23 @@ Always returns a fresh vector."
                   (long (.getY vec))
                   (long (.getZ vec)) )))
 
+;; id=get-block-vector
 (do
   (defmulti get-block-vector
     "Like (get-vector), but it returns a BlockVector with the coordinates *explicitly* truncated to integers.
 Always returns a fresh vector."
     class)
+  (defmethod get-block-vector BlockVector [vec]
+    (.clone vec))
+  (defmethod get-block-vector Vector [vec]
+    (.toBlockVector vec))
   (defmethod get-block-vector Location [loc]
     (BlockVector. (long (.getBlockX loc))
                     (long (.getBlockY loc))
                     (long (.getBlockZ loc)) ))
-    (defmethod get-block-vector :default [obj]
-      (get-block-vector (get-location obj))))
+  (defmethod get-block-vector :default [obj]
+    (debug-println-2 ":default method in (get-block-vector).")
+    (the* BlockVector (get-block-vector (get-location obj)))))
 
 
 (defn compare-vectors [^Vector v1 ^Vector v2]
@@ -442,12 +487,60 @@ Always returns a fresh vector."
                      (.toVector pos))))
 
 
-(defn add [pos x y z]
-  "Wrapper for Location.add() that uses a fresh Location.
-TODO: Overload for type."
-  (cond*
-   [(instance? Location pos) (.add (.clone pos) x y z)]
-   [:else (add (get-location pos) x y z)]))
+
+(defn dispatch-for-add [pos ?? & _]
+  [(class pos) (class ??)])
+
+(declare get-mod-vector)
+
+(do
+  (defmulti add
+    "Wrapper for Location.add() that uses a fresh Location."
+    dispatch-for-add)
+  (defmethod add [Location Number] [loc x y z]
+    (.. loc clone (add x y z)))
+  (defmethod add [Vector Number] [vec x y z]
+    (Vector. (+ x (.getX vec)) (+ y (.getY vec)) (+ z (.getZ vec))))
+  (defmethod add [Vector Vector] [v1 v2]
+    (Vector. (apply + (map (memfn getX) [v1 v2]))
+                  (apply + (map (memfn getY) [v1 v2]))
+                  (apply + (map (memfn getZ) [v1 v2]))))
+  (defmethod add [Block BlockFace] [b fc]
+    (the Block (add b (the BlockVector (get-mod-vector fc)))))
+  (defmethod add [Vector BlockFace] [v1 fc]
+    (add v1 (the Vector (get-mod-vector fc))))
+  (defmethod add [BlockFace Vector] [fc v1]
+    (add v1 (the Vector (get-mod-vector fc))))
+  (defmethod add [BlockVector BlockVector] [v1 v2]
+    (BlockVector. (apply + (map (memfn getX) [v1 v2]))
+                  (apply + (map (memfn getY) [v1 v2]))
+                  (apply + (map (memfn getZ) [v1 v2]))))
+  ;; TODO: I may not actually want to return a BlockVector here:
+  #_(defmethod add [BlockVector Number] [vec x y z]
+      (assert* (every? #(== % (int %)) [x y z]))
+      (let [loc (the Location (.. (get-location vec) (add x y z)))
+            [x y z] [(.getBlockX loc) (.getBlockY loc) (.getBlockZ loc)]]
+        (BlockVector. x y z)))
+  (defmethod add [Block Number] [block x y z]
+    (get-block-at (add (get-location block) x y z)))
+  (defmethod add [Block Vector] [block v]
+    (get-block-at (add (get-block-vector block) v)))
+  (defmethod add [Block BlockVector] [block v]
+    (get-block-at (add (get-block-vector block) v)))
+  (defmethod add [Object Number] [pos x y z]
+                                        ;    (debug-println-2 ":default method in (add).")
+    (add (the Location (get-location pos)) x y z))
+                                        ;(.. (get-location pos) clone (add x y z))
+  (defmethod add [Object Object] [o1 o2]
+    (add (get-vector o1) (get-vector o2))))
+
+(comment
+  (defmethod add [Block Object] [block o]
+    (get-block-at (add (get-block-vector block) o)))
+  (defmethod add [Object Block] [o block]
+    (add o (get-block-vector block)))
+  ;#_(defmethod add [Object BlockFace] [o fc] (add o (the Vector (get-mod-vector fc))))
+)
 
 ;;;; id=yaw
 (defn get-yaw [obj]
@@ -479,12 +572,21 @@ NB: If passed a BlockState object, the result, the same object, may be out-of-to
     class)
   (defmethod get-type ::block-state-image [block]
     (.getType block))
+  (defmethod get-type Material [mat]
+    mat)
   (defmethod get-type :default [obj]
+    (debug-println-2 ":default method in (get-type).")
     (get-type (get-block-at (get-block-vector obj)))))
 
-(defn set-type [block mat]
-  "Wrapper for Block.setType()."
-  (.setType block mat))
+(do
+  (defmulti set-type (fn [b _] (class b)))
+  (defmethod set-type Block [block mat]
+    "Wrapper for Block.setType()."
+    (.setType block mat)
+    (.getType block))
+  (defmethod set-type :default [block? mat]
+    (debug-println-2 ":default method in (set-type).")
+    (set-type (get-block-at block?) mat)))
 
 (defn force-update [^BlockState state]
   "Wrapper for (.update state true)."
@@ -522,6 +624,10 @@ NB: If passed a BlockState object, the result, the same object, may be out-of-to
             (recur)
             block))
         nil))))
+
+(defn fst-block []
+  "Shorthand; returns block focussed by first player."
+  (get-target-block (get-player)))
 
 
 #_ (defn light-TNT []
@@ -646,11 +752,14 @@ TODO: reset registered-events."
   ;(assert (instance? Player player))
   (copy-block (get-target-block player) times direction))
 
-(defn glow [pos]
-  (.setType (get-block-at pos) Material/GLOWSTONE)
-  (assert* (= (.getType (get-block-at pos))
-             Material/GLOWSTONE))
-  pos)
+(defn glow [designator]
+  (cond*
+   ((coll? designator) (doall (map glow designator)))
+   (:else
+    (.setType (get-block-at designator) Material/GLOWSTONE)
+    (assert* (= (.getType (get-block-at designator))
+                Material/GLOWSTONE))
+    designator)))
 
 (defn get-vectors-bounding-region [coll]
   "TODO: This could be done in one pass."
@@ -665,7 +774,7 @@ TODO: reset registered-events."
 ;;;; Wrapper:
 
 (defmacro store-state-of-first-players-targeted-block [varname]
-  `(let [state# (get-state (get-target-block (get-first-player)))]
+  `(let [state# (get-state (get-target-block (get-player)))]
      (def ~varname state#)
      (get-type state#)))
 ;"A perfectly good macro, but I'm moving it out in favor of (store-image-of-first-players-targeted-block)."
@@ -718,6 +827,8 @@ NB: Don't use 'reverse' as the parm name!"
       (.playEffect (.getWorld location) location effect data radius)
       (.playEffect (.getWorld location) location effect data))))
 
+
+
 (do
   (defmulti air?
     "New, spiffy multimethod version.
@@ -727,6 +838,7 @@ NB: Don't use 'reverse' as the parm name!"
     (= (get-type block) Material/AIR))
   (defmethod air? :default [x & {:keys [blocks-only]
                                    :or {blocks-only true}}]
+    (debug-println-2 ":default method in (air?).")
     (when blocks-only (throw (new IllegalArgumentException (format "Bad (air?) arg; %s cannot be \"coerced\" to yield a block." x))))))
 
 #_(defn air? [block & {:keys [blocks-only]
@@ -796,6 +908,140 @@ When 'solid' is log. true, the block must also pass a (solid?) test."
 "FIXME: This is a stub!"
   5)
 
+
+;; TODO: Maybe add an option that forces a check of the source block?  In case the BlockState is outdated.
+(do
+  (defmulti get-data
+    "Wrapper for BlockState.getData(), overloaded for other types."
+    class)
+  (defmethod get-data Block [block]
+    (the* MaterialData (get-data (get-state block))))
+  (defmethod get-data BlockState [block]
+    (the* MaterialData (.getData block)))
+  (defmethod get-data BlockImage [block]
+    (the* MaterialData (.. block getBlockState getData)))
+  (defmethod get-data MaterialData [mat]
+    mat))
+
+(definline get-facing [obj]
+  `(.getFacing ~obj))
+
+;;; id=attach
+(do
+  (defmulti attachable?
+    "Returns true if arg refers to a block whose MaterialData is Attachable; overloaded for type."
+    class)
+  (defmethod attachable? MaterialData [mat]
+    (instance? Attachable mat))
+  (defmethod attachable? ::block-state-image [img]
+    (attachable? (the MaterialData (get-data img))))
+  (defmethod attachable? Material [mat]
+    (throw (IllegalArgumentException. (format "TODO: (attachable?) currently isn't overloaded to match a Material arg to a MaterialData subclass.  Such an operation would require Java reflection, making it possible but expensive.  Offending argument: '%s'." mat)))))
+
+
+(do
+  (defmulti get-attached-face
+    "Wrapper for .getAttachedFace(); will throw an exception if called for a block that doesn't get attached."
+    class)
+  (defmethod get-attached-face MaterialData [data]
+    (the* BlockFace (.. data getAttachedFace)))
+  (defmethod get-attached-face :default [block]
+    (debug-println-2 ":default method in (get-attached-face).")
+    (get-attached-face (the* MaterialData (get-data block))))
+  (comment "Obsolete.  Now the overloaded (get-data) should take care of the polymorphism."
+           (defmethod get-attached-face Block [block]
+             (get-attached-face (get-state block)))
+           (defmethod get-attached-face BlockState [block-state]
+             (the* BlockFace (.. block-state getData getAttachedFace)))
+           (defmethod get-attached-face BlockImage [img]
+             (the* BlockFace (.. img getBlockState getData getAttachedFace)))))
+
+
+(do
+  (defmulti get-block-power class)
+  (defmethod get-block-power Block [block]
+    (.getBlockPower block)))
+
+
+(defn powered? [block]
+  (if (zero? (get-block-power block)) false true))
+
+
+(defn get-power-levels [block]
+  "This is mainly for examination purposes."
+  (zipmap (reverse '[N S E W U D Self]) (reverse (map #(.getBlockPower block %) [BlockFace/NORTH, BlockFace/SOUTH, BlockFace/EAST, BlockFace/WEST, BlockFace/UP, BlockFace/DOWN, BlockFace/SELF]))))
+
+(defn get-indirect-power [block]
+  (zipmap (reverse '[N S E W U D Self]) (reverse (map #(if % 1 0) (map #(.isBlockFaceIndirectlyPowered block %) [BlockFace/NORTH, BlockFace/SOUTH, BlockFace/EAST, BlockFace/WEST, BlockFace/UP, BlockFace/DOWN, BlockFace/SELF])))))
+
+(do
+  (defmulti get-powering-blocks
+    "Returns a "
+    class)
+  (defmethod get-powering-blocks Block [block]
+    (if (zero? (get-block-power block)) []
+        (map (comp get-block-at (partial add block)) (filter #(not (zero? (.getBlockPower block %))) [BlockFace/NORTH, BlockFace/SOUTH, BlockFace/EAST, BlockFace/WEST, BlockFace/UP, BlockFace/DOWN])))))
+
+(do
+ (defmulti get-mod-vector
+   "Packages the (X,Y,Z) coords from a BlockFace obj."
+   class)
+ (defmethod get-mod-vector BlockFace [f]
+   (BlockVector. (.getModX f) (.getModY f) (.getModZ f)))
+ (defmethod get-mod-vector :default [x]
+   (throw (IllegalArgumentException. (format "(get-mod-vector) is valid only for a BlockFace arg, not '%s'." x)))))
+
+
+(defn neighboring-blocks [b]
+  (map #(get-block-at (add b %)) [BlockFace/NORTH, BlockFace/SOUTH, BlockFace/EAST, BlockFace/WEST, BlockFace/UP, BlockFace/DOWN]))
+
+(defn surrounding-blocks [b]
+  "TODO: Efficiency?  Should we return a list or a set?"
+  (let [vb (get-block-vector b)
+        neighboring-vecs (remove #(block-pos-eq? vb %) (gen-region-vectors (add vb -1 -1 -1) (add vb 1 1 1)))]
+    (assert* (== (count neighboring-vecs) 26))
+    (satisfying coll? (map get-block-at neighboring-vecs))))
+
+(defn adjacent-blocks [b]
+  (let [vb (get-block-vector b)]
+    (satisfying coll? (map get-block-at ((juxt #(add % 1 0 0) #(add % -1 0 0) #(add % 0 0 1) #(add % 0 0 -1)) vb)))))
+
+(definline adjacent-directions []
+ '[BlockFace/NORTH, BlockFace/SOUTH, BlockFace/EAST, BlockFace/WEST] )
+
+(do
+  (defmulti get-attached-block
+   "Returns the block that the block represented by the argument is attached to.  If the arg is a Block, the result will be up-to-date; if the arg is a BlockState or BlockImage (q.v.), the coordinates from that snapshot will be used to retrieve the current World block.  There is therefore the chance of a senseless retval, in the case that the world has changed since the image was recorded.
+Returns nil if there is no valid attachment.  Unless :error is set to true, throwing an exception.
+If the :back keyword is set, behavior is somewhat different: all 26 neighbors are tested to see if something is attached *to* 'block'.  If more than one is found, a set of all is returned; if there is only one, it is returned by itself; otherwise nil is returned.  Thus the three possible outcomes have each a different return type."
+   (fn [b & _] (class b)))
+  (defmethod get-attached-block :cljengine.mc/block-state-image [block & {:keys [error, back]}]
+    (cond*
+     ((attachable? block)
+      (the Block (add block (get-attached-face block))))
+     (back
+      (let [ns (surrounding-blocks block)
+            attached-blocks (filter #(when (attachable? %)
+                                       (get-attached-block % :back false))
+                                    ns)]
+        (cond*
+         ((zero? (count attached-blocks))
+          nil)
+         ((== 1 (count attached-blocks))
+          (first attached-blocks))
+         (:else (set attached-blocks)))))
+     (error (throw (Exception. (format "(get-attached-block) in strict mode found no attachment for %s." block))))))
+  (defmethod get-attached-block :default [x & _]
+    (throw (IllegalArgumentException. (format "Default method for (get-attached-block): non-block arg '%s'." x)))))
+
+#_(do
+  (defmulti attached?
+   "Predicate; returns true if block b1, or that represented by b1, is attached to the block given by b2."
+   (fn [b1 b2] (map class [b1 b2])))
+  (defmethod attached? [:cljengine.mc/block-state-image
+                        :cljengine.mc/block-state-image] [b1 b2]
+    (get-attached-face b1)))
+
 #_(defn test-some-shit []
 ;  (compile 'cljengine.re)
   (new cljengine.re.ClojureRegen)
@@ -826,6 +1072,27 @@ When 'solid' is log. true, the block must also pass a (solid?) test."
   (swap! regengine-emergency-break (constantly true)))
 
 
+;;;; id=metadata
+(defn set-metadata [obj tag val & {:keys [plugin]}]
+  "'plugin' defaults to the val in the *plugin* dynavar."
+  ;(assert* (instance? Metadatable obj))
+  (let [plugin (or plugin *plugin*)]
+    (.setMetadata (the Metadatable obj) (the String tag) (FixedMetadataValue. plugin val))
+    (assert* (.hasMetadata obj tag)))
+  val)
+
+(defn get-metadata [obj tag & {:keys [plugin]}]
+  (let [plugin (or plugin *plugin*)]
+    (when (.hasMetadata obj tag)
+      (.value (some (fn [v]
+                      (when (= (.getOwningPlugin v) plugin) v))
+                    (. obj (getMetadata tag)))))))
+
+
+;;;; id=reflection
+(defn get-methods [obj]
+  (vec (if (class? obj) (.getMethods obj)
+           (.getMethods (class obj)))))
 
 
 

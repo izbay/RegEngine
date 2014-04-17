@@ -6,9 +6,6 @@
                                         ;  (:require clojure.core)
   (:use (clojure [core :exclude [map]] repl pprint reflect set))
   (:use clojure.java.io)
-  (:require [cljengine.mc :as mc]
-            [cljengine.events :as events]
-            [cljengine.tasks :as tasks])
   (:use
    (cljminecraft core
                           entity
@@ -20,58 +17,63 @@
                           util
                           [world :exclude [effect]] ; (effect) has a simple bug.
                           ;; can't pull in all of cljminecraft.player without conflict:
-                          [player :only [send-msg]])
-   (cljengine mc tasks
-              events))
-           ;; Add some Enums...
-           (:import (org.reflections Reflections)
-                    (org.bukkit Bukkit
-                                Material
-                                Location
-                                World
-                                Effect)
-                    (org.bukkit.block Block
-                                      BlockFace ; Enum
-                                      BlockState)
-                    (org.bukkit.entity Entity
-                                       EntityType
-                                       Player)
-                    (org.bukkit.metadata Metadatable)
-                    (org.bukkit.event Event
-                                      Cancellable
-                                      EventPriority ; Enums
-                                      HandlerList
-                                      Listener)
-                    (org.bukkit.event.entity PlayerDeathEvent)
+                          [player :only [send-msg]]))
+  (:require [cljengine.mc :as mc]
+            [cljengine.events :as events]
+            [cljengine.tasks :as tasks])
+  (:use (cljengine mc
+                     [tasks :exclude [map]]
+              [block :exclude [map]]
+              [events :exclude [map]]))
+  ;; Add some Enums...
+  (:import (org.reflections Reflections)
+           (org.bukkit Bukkit
+                       Material
+                       Location
+                       World
+                       Effect)
+           (org.bukkit.block Block
+                             BlockFace ; Enum
+                             BlockState)
+           (org.bukkit.entity Entity
+                              EntityType
+                              Player)
+           (org.bukkit.metadata Metadatable)
+           (org.bukkit.event Event
+                             Cancellable
+                             EventPriority ; Enums
+                             HandlerList
+                             Listener)
+           (org.bukkit.event.entity PlayerDeathEvent)
+           (org.bukkit.event.player PlayerMoveEvent)
+           (org.bukkit.event.block BlockEvent
+                                   BlockPhysicsEvent
+                                   BlockBreakEvent)
+           (org.bukkit.event.vehicle VehicleBlockCollisionEvent
+                                     VehicleMoveEvent)
+           (org.bukkit.util Vector
+                            BlockVector)
+           (org.bukkit.plugin Plugin
+                              RegisteredListener)
+           (org.bukkit.plugin.java JavaPlugin) ; subtype of Plugin
+           (org.bukkit.scheduler BukkitScheduler
+                                 BukkitTask)
+           (cljminecraft BasePlugin
+                         ClojurePlugin)
+           (org.bukkit.util BlockIterator)
+           (com.github.izbay.regengine RegEnginePlugin
+                                       BlockImage)))
 
-                    (org.bukkit.event.player PlayerMoveEvent)
-                    (org.bukkit.event.block BlockEvent
-                                            BlockPhysicsEvent
-                                            BlockBreakEvent)
-                    (org.bukkit.event.vehicle VehicleBlockCollisionEvent
-                                              VehicleMoveEvent)
-                    (org.bukkit.util Vector
-                                     BlockVector)
-                    (org.bukkit.plugin Plugin
-                                       RegisteredListener)
-                    (org.bukkit.plugin.java JavaPlugin) ; subtype of Plugin
-                    (org.bukkit.scheduler BukkitScheduler
-                                          BukkitTask)
-                    (cljminecraft BasePlugin
-                                  ClojurePlugin)
-                    (org.bukkit.util BlockIterator)
-                    (com.github.izbay.regengine RegEnginePlugin
-                                                BlockImage)))
-
-;(declare physics-blocking-handler, player-move-event-handler)
+                                        ;(declare physics-blocking-handler, player-move-event-handler)
 
 
+(load "dependencies")
 
 (defonce ^{:doc "Default number of ticks between backup & restoration." :dynamic true}
   regen-total-delay (seconds-to-ticks 20))
 
 (defonce ^{:doc "Number of ticks that elapse between warning attempts"
-         ;  :dynamic true
+                                        ;  :dynamic true
            }
   regen-warning-period (seconds-to-ticks 5))
 
@@ -87,10 +89,10 @@
   (empty? @regen-batch-regions-active))
 
 #_(defn regen-regions-active? []
-  ;; I know the docs don't want you doing this, but I want a simple retval:
-  (not (empty? @regen-batch-regions-active)))
+    ;; I know the Clojure docs don't want you using (empty?) for this check, but I want a simple retval:
+    (not (empty? @regen-batch-regions-active)))
 
-;(defonce ^{:doc "Bound to the last PlayerMoveEvent listener registered to our plugin."} player-move-listener (atom nil))
+                                        ;(defonce ^{:doc "Bound to the last PlayerMoveEvent listener registered to our plugin."} player-move-listener (atom nil))
 
 (defn visual-warning-at [pos]
   "A warning to players that the block is about to be overwritten.  The 'nil' arg depends on the effect type."
@@ -104,6 +106,59 @@
       (assert* (= (get-type block') new-material) "Type %s should be type %s!" (get-type block') new-material)
       block')))
 
+(do
+  (defmulti restore
+    "Wrapper for BlockImage.restore() that allows overloading for particular types.  Note: If you add a specialization clause to (restore), you should probably add one to (restored?) as well."
+    dispatch-on-block-type)
+  (defmethod restore BlockImage [b]
+    (.restore b)))
+
+(do
+  (defmulti restored?
+    "Wrapper for BlockImage.isRestored(), parallel to (restore)."
+    dispatch-on-block-type)
+  (defmethod restored? BlockImage [i]
+    (.isRestored i)))
+
+;; Redstone ore: replace glowing with regular
+(do
+  (defmethod-on-block-type restored? glowing-redstone-ore [block]
+    (= (get-type (get-block-at block)) Material/REDSTONE_ORE))
+
+  (defmethod-on-block-type restore glowing-redstone-ore [img]
+   (let [block (get-block-at (the BlockImage img))]
+     (set-type (the Block block) Material/REDSTONE_ORE)
+     (assert* (= Material/REDSTONE_ORE (get-type block)))
+     (assert* (restored? img))
+     block)))
+
+;; Burning furnace: TODO: Replacing with a furnace that isn't burning?
+#_ (do
+     (defmethod-on-block-type restored? glowing-redstone-ore [img]
+       (= (get-type (get-block-at block)) Material/REDSTONE_ORE))
+
+     (defmethod-on-block-type restore lit-furnace [img]
+       (let [block (get-block-at (the BlockImage img))]
+         (set-type (the Block block) Material/BURNING_FURNACE)
+         (assert* (= Material/BURNING_FURNACE))
+         (assert* (restored? img))
+         block)))
+
+;; Monster eggs: Retrieve the texture material for the block; replace with a regular block of that material type.
+(do
+  ;; TODO: Overload on type?
+  (defmethod-on-block-type restored? monster-egg [img]
+    (assert* (instance? BlockImage img))
+    (= (get-type (the Material (get-block-at img)))
+       (the Material (.. img getBlockState getData getMaterial))))
+
+  (defmethod-on-block-type restore monster-egg [img]
+    (let [block (the Block (get-block-at (the BlockImage img)))
+          texture (the Material (.. img getBlockState getData getMaterial))]
+      (set-type block texture)
+      (assert* (= get-type block texture))
+      (assert* (restored? img))
+      block)))
 
 (declare regenerate-region)
 
@@ -155,21 +210,25 @@
   "Installed by (ensure-regengine-handlers) in regen.clj.
 If *log-physics-events* is logical true, will print a message with each event.
 If *log-physics-events* is set to :record, this will also be stored into the *physics-event-log* global. "
-  (assert (instance? BlockPhysicsEvent ev))
-  (let [block (.getBlock ev)
-        name (.getEventName ev)
-        type (.getChangedType ev)]
-    ;(debug-println "Logging?" *log-physics-events*)
-    (when *log-physics-events*
-      (debug-announce  name "; material" type "on block" block)
-      (when (= *log-physics-events* :record)
-        (swap! physics-events-log conj ev)))
-    (when-not *suppress-physics*
-      (when (get-in @cljengine.regen/regengine-event-handlers ["block.block-physics" :active])
-        (if (.isCancelled ev) (debug-println "Already cancelled.")
-            (do (.setCancelled ev true)
-                (debug-announce "Cancelled %s" name))))))
-  true)
+  (try
+    (assert (instance? BlockPhysicsEvent ev))
+    (let [block (.getBlock ev)
+          name (.getEventName ev)
+          type (.getChangedType ev)]
+                                        ;(debug-println "Logging?" *log-physics-events*)
+      (when *log-physics-events*
+        (debug-announce  name "; material" type "on block" block)
+        (when (= *log-physics-events* :record)
+          (swap! physics-events-log conj ev)))
+      (when-not *suppress-physics*
+        (when (get-in @cljengine.regen/regengine-event-handlers ["block.block-physics" :active])
+          (if (.isCancelled ev) (debug-println "Already cancelled.")
+              (do (.setCancelled ev true)
+                  (debug-announce "Cancelled %s" name))))))
+    true
+    (catch Error e
+      (debug-announce "Exception in (physics-blocking-handler)!")
+      (throw e))))
 
 ;; TODO: Priority levels?
 ;; Gotcha: If you change either of the handler funcs, you may need to update this variable!
@@ -259,7 +318,7 @@ If *log-physics-events* is set to :record, this will also be stored into the *ph
     (assert* (= (get-world l1) (get-world l2)))
     ;(assert* (and (integer? delay) (> delay 0)))
     (let [images (apply alter-region l1 l2 options)]
-      (apply regenerate-region options)))
+      (apply regenerate-region images options)))
   (defmethod alter-and-restore-region [::mc/block-state-image ::mc/block-state-image] [block1 block2 & rest]
     (debug-println (list* block1 block2 rest))
     (apply alter-and-restore-region (get-location block1) (get-location block2) rest)))
@@ -281,6 +340,8 @@ If *log-physics-events* is set to :record, this will also be stored into the *ph
                              (assert* (= i j) "BlockImage %s should equal %s." i j)) images @latest-altered-region ))
                true))
     (regenerate-region (set images) :delay delay :suppress-physics suppress-physics :bottom-up bottom-up :wold world)))
+
+
 
 
 
@@ -307,9 +368,10 @@ If :suppress-physics is set, we'll try to do just that...
       (let [images (if-not bottom-up images
                            (sort (fn [i1 i2] (apply compare-vectors (map get-vector [i1 i2]))) images))]
         (ensure-regengine-handlers)
-        (when warn-players
-          (swap! regengine-event-handlers assoc-in ["player.player-move" :active] true)
-          (assert* (get-in @regengine-event-handlers ["player.player-move" :active])))
+        (if warn-players
+          (do(swap! regengine-event-handlers assoc-in ["player.player-move" :active] true)
+             (assert* (get-in @regengine-event-handlers ["player.player-move" :active])))
+          (swap! regengine-event-handlers assoc-in ["player.player-move" :active] false))
         ;; Make sure that, for now, this is disabled:
         (swap! regengine-event-handlers assoc-in ["block.block-physics" :active] false)
         (assert* (not (get-in @regengine-event-handlers ["block.block-physics" :active])))
@@ -336,49 +398,62 @@ If :suppress-physics is set, we'll try to do just that...
                     ;; Primary restoration handler:
                     (delayed-task plugin
                                   (fn []
-                                    (debug-announce "@ %s: Firing regen task." (get-full-time))
-                                    ;; TODO: This might be a good spot to try a transaction...
-                                    (assert* (contains? @regen-batch-regions-active regen-blocks-map))
-                                    (when suppress-physics
-                                      (swap! regengine-event-handlers assoc-in ["block.block-physics" :active] true)
-                                      (assert* (get-in @regengine-event-handlers ["block.block-physics" :active])))
-                                    (loop* [n 1]
-                                           (abort-on-emergency-break!)
-                                           (debug-announce "Starting restoration pass %s: %s." n (get-full-time))
-                                           (if (not-every? true?
-                                                           (doall (map (fn [b]
-                                                                         (debug-announce "@ %s: Image of type %s at %s.  Restored? %s" (get-full-time) (.getType b) (format-vector (get-vector b)) (.isRestored b))
-                                                                         (if (.isRestored b) true
-                                                                             (do
-                                                                               (debug-announce "Restoring %s: %s -> %s." b (get-type (get-block-at (get-location b))) (get-type b))
-                                                                               (.restore b)
-                                                                               false)))
-                                                                       (vals regen-blocks-map))))
-                                             (recur (inc n))
-                                             (debug-announce "Done with restoration loop after %s passes!" n)))
-                                    (debug-println "Dequeueing this REG EN batch.")
-                                    (swap! regen-batch-regions-active disj regen-blocks-map)
-                                    (when warn-players
-                                      (cond*
-                                       ((not (realized? warning-task))
-                                        (debug-announce "Warning: The warning-issuing repeated-task seems not to have been started."))
-                                       ((not (task-active? @warning-task))
-                                        (debug-announce "Warning: The warner got stopped."))
-                                       (:else (cancel-task @warning-task)))
-                                      ;; If all regen regions are done, we can deactivate the warning stuff.  TODO: Move this outside of the individual batch handler.
-                                      (when (regengine-done?)
-                                        (swap! regengine-event-handlers assoc-in ["player.player-move" :active] false)
-                                        (assert* (not (get-in @regengine-event-handlers ["player.player-move" :active]))))
-                                      (swap! regengine-event-handlers assoc-in ["block.block-physics" :active] false)
-                                      (assert* (not (get-in @regengine-event-handlers ["block.block-physics" :active])))
-                                      (assert* (not (contains? @regen-batch-regions-active regen-blocks-map)))
-                                      ;; Remove players from considertation for the movement warner if they're no longer in a REG EN zone:
-                                      (doseq [pc (online-players)]
-                                        (when (and (player-flagged-in-regen-area? pc)
-                                                   (not (player-in-regen-area? pc)))
-                                          (swap! players-in-regen-zone disj pc)
-                                          (assert* (not (player-flagged-in-regen-area? pc)))))))
+                                    (try
+                                      (debug-announce "@ %s: Firing regen task." (get-full-time))
+                                     ;; TODO: This might be a good spot to try a transaction...
+                                     (assert* (contains? @regen-batch-regions-active regen-blocks-map))
+                                     (when suppress-physics
+                                       (swap! regengine-event-handlers assoc-in ["block.block-physics" :active] true)
+                                       (assert* (get-in @regengine-event-handlers ["block.block-physics" :active])))
+                                     (debug-println "Regen map:" regen-blocks-map)
+                                     (def latest-regen-map regen-blocks-map)
+                                     (loop* [n 1]
+                                            (abort-on-emergency-break!)
+                                            (debug-announce "Starting restoration pass %s: %s." n (get-full-time))
+                                            (let [vals-to-check (vals regen-blocks-map)]
+                                              (debug-println "Vals:" vals-to-check)
+                                              (if (not-every? true?
+                                                              (doall (map (fn [b]
+                                                                            (try
+                                                                              (debug-announce "@ %s: Image of type %s at %s.  Restored? %s" (get-full-time) (.getType b) (format-vector (get-vector b)) (restored? b))
+                                                                              (if (restored? b) true
+                                                                                  (do
+                                                                                    (debug-announce "Restoring %s: %s -> %s." b (get-type (get-block-at (get-location b))) (get-type b))
+                                                                                    (restore b)
+                                                                                    false))
+                                                                              (catch Error e
+                                                                                (debug-announce "Exception thrown within the map func in the restoration block loop!")
+                                                                                (throw e))))
+                                                                          vals-to-check)))
+                                                (recur (inc n))
+                                                (debug-announce "Done with restoration loop after %s passes!" n))))
+                                     (debug-println "Dequeueing this REG EN batch.")
+                                     (swap! regen-batch-regions-active disj regen-blocks-map)
+                                     (when warn-players
+                                       (cond*
+                                        ((not (realized? warning-task))
+                                         (debug-announce "Warning: The warning-issuing repeated-task seems not to have been started."))
+                                        ((not (task-active? @warning-task))
+                                         (debug-announce "Warning: The warner got stopped."))
+                                        (:else (cancel-task @warning-task)))
+                                       ;; If all regen regions are done, we can deactivate the warning stuff.  TODO: Move this outside of the individual batch handler.
+                                       (when (regengine-done?)
+                                         (swap! regengine-event-handlers assoc-in ["player.player-move" :active] false)
+                                         (assert* (not (get-in @regengine-event-handlers ["player.player-move" :active]))))
+                                       (swap! regengine-event-handlers assoc-in ["block.block-physics" :active] false)
+                                       (assert* (not (get-in @regengine-event-handlers ["block.block-physics" :active])))
+                                       (assert* (not (contains? @regen-batch-regions-active regen-blocks-map)))
+                                       ;; Remove players from considertation for the movement warner if they're no longer in a REG EN zone:
+                                       (doseq [pc (online-players)]
+                                         (when (and (player-flagged-in-regen-area? pc)
+                                                    (not (player-in-regen-area? pc)))
+                                           (swap! players-in-regen-zone disj pc)
+                                           (assert* (not (player-flagged-in-regen-area? pc))))))
+                                     (catch Error e
+                                       (debug-announce "Exception in regeneration task!")
+                                       (throw e))))
                                   delay)
+
                     ;; Unless deinstructed, start the warner loops if they aren't running:
                     (when warn-players
                       (debug-println "(Re)starting player warner.")
@@ -427,6 +502,7 @@ If :suppress-physics is set, we'll try to do just that...
                 ;; retval
                 [(count images) delay]]))))
   (defmethod regenerate-region :default [blocks? & rest]
+    (debug-println-2 ":default method in (regenerate-region).")
     (assert* (not-empty blocks?))
     (let [images (clojure.core/map #(BlockImage. (get-state %)) blocks?)
           class-vec (vec (set (map class images)))]
@@ -442,11 +518,11 @@ If :suppress-physics is set, we'll try to do just that...
   (apply batch-alter-and-restore [loc] options))
 
 (defn find-failures []
-  (remove #(.isRestored %) @latest-altered-region))
+  (remove #(restored? %) @latest-altered-region))
 
 (defn verify-altered-region []
   (cond*
-   ((every? #(.isRestored %) @latest-altered-region)
+   ((every? #(restored? %) @latest-altered-region)
           (println "No failures!")
           true)
    (:else (println "*** Failures!")
@@ -487,44 +563,11 @@ If :suppress-physics is set, we'll try to do just that...
 
 
 
-#_(defn instate-physics-blocking-handler []
-  (let [listeners (set (get-registered-listeners))
-        old-c (count listeners)]
-    (cond*
-     ((and @physics-blocking-listener
-           (contains? listeners @physics-blocking-listener))
-      (debug-println "BlockPhysics handler still in place."))
-     (:else
-      (register-event *plugin* "block.block-physics" player-move-event-handler ;TODO: Level
-                      )
-      (assert* (== (count (get-registered-listeners))
-                   (inc old-c)))
-      (let [diff (difference (set (get-registered-listeners)) listeners)]
-        (assert* (== 1 (count diff)) "Number %s should be 1." (count diff))
-        (swap! player-move-listener (constantly (first diff))))
-      (debug-println "REG EN's player-move-event-handler loaded.")))))
 
 
-#_(defn instate-player-move-event-handler []
-  ;(binding [*debug-print* false] (unregister-our-events "player.player-move"))
-  (let [listeners (set (get-registered-listeners))
-        old-c (count listeners)]
-    (cond*
-     ((and @player-move-listener
-           (contains? listeners @player-move-listener))
-      (debug-println "PlayerMoveEvent handler still in place."))
-     (:else
-      (register-event *plugin* "player.player-move" player-move-event-handler ;TODO: Level
-                      )
-      (assert* (== (count (get-registered-listeners))
-                   (inc old-c)))
-      (let [diff (difference (set (get-registered-listeners)) listeners)]
-        (assert* (== 1 (count diff)) "Number %s should be 1." (count diff))
-        (swap! player-move-listener (constantly (first diff))))
-      (debug-println "REG EN's player-move-event-handler loaded."))))
-  (assert* @player-move-listener)
-  @player-move-listener)
 
-(defn cancel-all-regen-ops []
+(defn cancel-all-regen-ops [& {:keys [events] :or {events true}}]
   (cancel-all-tasks)
+  (when events
+    (unregister-our-events))
   (swap! regen-batch-regions-active (constantly #{})))

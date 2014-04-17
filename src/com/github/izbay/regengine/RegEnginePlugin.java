@@ -83,7 +83,7 @@ public class RegEnginePlugin extends JavaPlugin
 			if (clojureRegen)
 			{
 				try {
-					RT.loadResourceScript("RegEngine/src/cljengine/regen.clj");
+					RT.loadResourceScript("cljengine/regen.clj");
 					RT.var("cljengine.mc", "*debug-print*", true);// Set to false to make (debug-print) can it
 					RT.var("cljengine.regen", "regen-total-delay", 200); // 10s default wait
 					RT.var("cljengine.regen", "regen-warning-period", 20); // Shorter default period

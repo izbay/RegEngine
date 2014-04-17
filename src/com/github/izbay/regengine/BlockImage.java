@@ -61,6 +61,9 @@ public class BlockImage
 	 */
 	public Location getLocation() { return blockLoc; }
 
+	public BlockVector getBlockVector() {
+			return new BlockVector(blockLoc.getBlockX(), blockLoc.getBlockY(), blockLoc.getBlockZ());
+	}
 	/**
 	 * @return the BlockState
 	 */
