@@ -443,6 +443,7 @@
 (defn tripwire-dependency [b]
   (assert* (isa? (class b) :cljengine.mc/block-state-image))
   (satisfying dep-map?
+
               (let [typ (get-type b)]
                 (cond*
                  [(= typ Material/TRIPWIRE_HOOK)
@@ -454,7 +455,7 @@
                     (empty-deps)
                     (gen-deps (filter #(and (= Material/TRIPWIRE (get-type %))
                                             (. (get-state %) isActive %))
-                             (adjacent-blocks b))))]))))
+                                      (adjacent-blocks b))))]))))
 
 #_(defn vine-dependency [b]
     (assert* (isa? (class b) :cljengine.mc/block-state-image))

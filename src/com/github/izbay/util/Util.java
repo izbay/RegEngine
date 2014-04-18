@@ -12,6 +12,7 @@ import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.BlockState;
+import org.bukkit.material.Attachable;
 import org.bukkit.util.BlockVector;
 import org.bukkit.util.Vector;
 
@@ -81,6 +82,9 @@ public abstract class Util
 		public static boolean isSolid(final Block b)
 		{	return b.getType().isSolid(); }// isSolid()
 		
+		public static boolean isSolid(final BlockState b)
+		{	return b.getType().isSolid(); }// isSolid()
+		
 		public static World getCurrentWorld()
 		{ return Bukkit.getServer().getWorlds().get(0); }
 		
@@ -127,6 +131,9 @@ public abstract class Util
 		public static Block getBlockBelow(final Vector v)
 		{ return getBlockAt(Util.add(v, 0, -1, 0)); }
 		
+		public static Block getBlockBelow(final Location l)
+		{	return getBlockAt(l.clone().add(0, -1, 0)); }
+		
 		public static Block getBlockBelow(final Block b)
         { return getBlockAt(new Vector(b.getX(), b.getY()-1, b.getZ())); }
 		
@@ -140,7 +147,37 @@ public abstract class Util
 			{ s.add(Util.add(b,dir)); }
 			assert(s.size() == 4);
 			return s;
-		}
+		}// getAdjacentBlocks()
+		
+		public static Set<Block> getEnclosingBlocks(final Block b)
+		{
+			HashSet<Block> s = new HashSet<Block>();
+			for(BlockFace dir : adjacentDirections())
+			{ s.add(add(b,dir)); }
+			s.add(add(b, BlockFace.UP));
+			s.add(add(b, BlockFace.DOWN));
+			assert(s.size() == 6);
+			return s;
+		}// getEnclosingBlocks()
+		
+		public static boolean isAttachable(final BlockState b)
+		{ return (b.getData() instanceof Attachable); }
+
+		public static boolean isAttachable(final Block b)
+		{ return (b.getState().getData() instanceof Attachable); }
+		
+		public static Block getAttachedBlock(final Block b)
+		{	return getAttachedBlock(b.getState()); }// getAttachedFace
+	
+		public static Block getAttachedBlock(final BlockState b)
+		{
+			if( isAttachable(b))
+			{
+				return add(getBlockAt(b.getLocation()),((Attachable) b.getData()).getAttachedFace());
+			}
+			else
+			{	return null; }
+		}// getAttachedFace
 
 		private Util() {}
 }// Util

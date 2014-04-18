@@ -4,9 +4,17 @@ package com.github.izbay.regengine;
 //import java.util.Set;
 
 import org.bukkit.World;
+//import org.bukkit.Material;
+//import org.bukkit.block.Block;
+//import org.bukkit.block.BlockFace;
 //import org.bukkit.block.BlockFace;
 //import java.util.*;
 //import org.bukkit.util.BlockVector;
+
+//import com.github.izbay.regengine.block.Action;
+//import com.github.izbay.regengine.block.DependingBlock;
+//import com.github.izbay.regengine.block.DependingBlockSet;
+//import com.github.izbay.util.Util;
 
 //import com.github.izbay.util.Util;
 
@@ -14,7 +22,7 @@ public class RegenBatch implements RegenBatchIface
 {
 	private final World world;
 	private final int restorationTime;
-//	private BlockImage[] blocks;
+//	private BlockImage[] blocks; // Comment this out until I'm ready to use it
 
 	/* (non-Javadoc)
 	 * @see com.github.izbay.regengine.RegenBatchIface#getWorld()
@@ -47,5 +55,10 @@ public class RegenBatch implements RegenBatchIface
 	{
 		// TODO
 	}// cancel
+	
+/*	public DependingBlockSet doFwdDependencies()
+	{
+		Queue<DependingBlock>
+	}*/
 	
 }// RegenBatch

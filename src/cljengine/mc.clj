@@ -58,8 +58,15 @@
                     (cljminecraft BasePlugin
                                   ClojurePlugin)
                     (org.bukkit.util BlockIterator)
-                    (com.github.izbay.regengine RegEnginePlugin
-                                                BlockImage)))
+                    )
+  (:import (com.github.izbay.regengine RegEnginePlugin
+                                       BlockImage
+                                       RegenBatch)
+           (com.github.izbay.regengine.block Action
+                                             DependingBlock
+                                             VineDependingBlock
+                                             DependingBlockSet)
+           (com.github.izbay.util Util)))
 
 
 
@@ -73,6 +80,7 @@
            :doc "To use in preference to clj-plugin."}
   *plugin*
   @clj-plugin)
+
 
 
 ;;;; id=TYPES
@@ -992,22 +1000,45 @@ When 'solid' is log. true, the block must also pass a (solid?) test."
    (throw (IllegalArgumentException. (format "(get-mod-vector) is valid only for a BlockFace arg, not '%s'." x)))))
 
 
-(defn neighboring-blocks [b]
-  (map #(get-block-at (add b %)) [BlockFace/NORTH, BlockFace/SOUTH, BlockFace/EAST, BlockFace/WEST, BlockFace/UP, BlockFace/DOWN]))
+(comment
+  "This should include adjacent blocks and cattycorner."
+  (defn neighboring-blocks [b]
+   (map #(get-block-at (add b %)) [BlockFace/NORTH, BlockFace/SOUTH, BlockFace/EAST, BlockFace/WEST, BlockFace/UP, BlockFace/DOWN])))
+
+;;;; id=DIRECTIONS
+(do
+  (def NORTH BlockFace/NORTH)
+  (def SOUTH BlockFace/SOUTH)
+  (def EAST BlockFace/EAST)
+  (def WEST BlockFace/WEST))
 
 (defn surrounding-blocks [b]
-  "TODO: Efficiency?  Should we return a list or a set?"
+  "The 27-block cube minus 'b' at its center.  TODO: Efficiency?  Should we return a list or a set?"
   (let [vb (get-block-vector b)
         neighboring-vecs (remove #(block-pos-eq? vb %) (gen-region-vectors (add vb -1 -1 -1) (add vb 1 1 1)))]
     (assert* (== (count neighboring-vecs) 26))
     (satisfying coll? (map get-block-at neighboring-vecs))))
 
 (defn adjacent-blocks [b]
+  "The four blocks in the cardinal directions."
   (let [vb (get-block-vector b)]
     (satisfying coll? (map get-block-at ((juxt #(add % 1 0 0) #(add % -1 0 0) #(add % 0 0 1) #(add % 0 0 -1)) vb)))))
 
+
 (definline adjacent-directions []
  '[BlockFace/NORTH, BlockFace/SOUTH, BlockFace/EAST, BlockFace/WEST] )
+
+#_(if (contains? (set (map (memfn getName) (.getMethods Util))) "getEnclosingBlocks")
+  #_(definline enclosing-blocks [b]
+    `(Util/getEnclosingBlocks ~b))
+  #_(defn enclosing-blocks [b]
+         (let [vb (get-block-vector b)]
+           (satisfying coll? (map (partial add b) (concat (adjacent-directions) [BlockFace/UP, BlockFace/DOWN]))))))
+
+(defn enclosing-blocks [b]
+  "The six blocks sharing faces with 'b'."
+         (let [vb (get-block-vector b)]
+           (satisfying coll? (map (comp get-block-at (partial add (get-block-vector b))) (concat (adjacent-directions) [BlockFace/UP, BlockFace/DOWN])))))
 
 (do
   (defmulti get-attached-block

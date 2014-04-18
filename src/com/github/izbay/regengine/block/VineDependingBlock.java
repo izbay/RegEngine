@@ -1,5 +1,6 @@
 package com.github.izbay.regengine.block;
 
+import java.util.EnumMap;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -39,9 +40,9 @@ public class VineDependingBlock extends DependingBlock
 		if(block.getType() != Material.VINE)
 		{	throw new IllegalArgumentException(); }
 		vineCoveredFaces = new HashSet<BlockFace>();
-		independentFaces = new HashMap<BlockFace,Set<Orientation>>();
+		independentFaces =  new EnumMap<BlockFace,Set<Orientation>>(BlockFace.class);
 		final Block bAbove = Util.getBlockAbove(block);
-		final boolean isVineAbove = bAbove.getType() == Material.VINE;
+		final boolean isVineAbove = (bAbove.getType() == Material.VINE);
 		for(BlockFace dir : Util.adjacentDirections())
 		{
 			final MaterialData mat = block.getBlockState().getData();
@@ -91,16 +92,43 @@ public class VineDependingBlock extends DependingBlock
 								&& d2.independentFaces.get(dir).contains(o)) );
 				}// for
 				
-				if(this.independentFaces.get(dir).isEmpty())
+				// Handled by Normalize:
+				/* if(this.independentFaces.get(dir).isEmpty())
 				{	this.independentFaces.remove(dir);	}
+				*/
 			}// if
 			else
 			{	this.independentFaces.remove(dir); }// else
 		}// for
 			
-		// Compute: If there are no independent faces remaining, the block will have no support and should be destroyed.
+		/*
         if(this.independentFaces.isEmpty())
         {	this.action = Action.DESTROY; }// if	
+        */
+		this.normalizeDestructively();
+	}// ctor
+	
+
+	
+
+	/**
+	 * Copy constructor.  Deep copy.
+	 * @param rhs
+	 */
+	public VineDependingBlock(final VineDependingBlock rhs)
+	{
+		super(rhs.block, rhs.action);
+		this.vineCoveredFaces = new HashSet<BlockFace>(rhs.vineCoveredFaces);
+		this.independentFaces = new EnumMap<BlockFace,Set<Orientation>>(rhs.independentFaces);
+		// Deep-copy the sets:
+		for(BlockFace dir : BlockFace.values())
+		{
+			if(this.independentFaces.containsKey(dir))
+			{	this.independentFaces.put(dir, EnumSet.copyOf(rhs.independentFaces.get(dir))); }// if
+		}// for
+
+		assert(this.independentFaces != rhs.independentFaces);
+		assert(this.independentFaces != rhs.independentFaces);
 	}// ctor
 
 	public Set<BlockFace> onFaces()
@@ -112,9 +140,64 @@ public class VineDependingBlock extends DependingBlock
 	 * @param d2
 	 * @return
 	 */
-	public VineDependingBlock mergeWith(final VineDependingBlock d2)
+	@Override
+	public VineDependingBlock mergeWith(final DependingBlock d2)
 	{
+		if(!(d2 instanceof VineDependingBlock)) throw new IllegalArgumentException(); 
 		//if(this.coord() != d2.coord()) { throw new IllegalArgumentException(); }
-		return new VineDependingBlock(this, d2);
-	}
+		return new VineDependingBlock(this, (VineDependingBlock)(d2));
+	}// mergeWith()
+	
+		
+	/**
+	 * Non-mutator.
+	 * @param map
+	 * @return
+	 */
+	public VineDependingBlock difference(final Map<BlockFace,Set<Orientation>> map)
+	{
+		final VineDependingBlock vb = new VineDependingBlock(this);
+		for(BlockFace dir : map.keySet())
+		{
+			if(vb.independentFaces.containsKey(dir))
+			{ vb.independentFaces.get(dir).removeAll(map.get(dir)); }// if
+			
+			// Handled with normalize() now:
+			/*if(vb.independentFaces.get(dir).isEmpty())
+			{	vb.independentFaces.remove(dir); }// if*/
+		}// for
+		
+		/*if(vb.independentFaces.isEmpty())
+        {	vb.action = Action.DESTROY; }// if	*/
+		
+		vb.normalizeDestructively();
+		return vb;
+	}// difference()
+
+	// Compute: If there are no independent faces remaining, the block will have no support and should be destroyed.
+	public VineDependingBlock normalize()
+	{
+		final VineDependingBlock vb =  new VineDependingBlock(this); // This does a deep copy, so modifying it should be OK
+		vb.normalizeDestructively();
+		
+		return vb;
+	}// normalize()
+
+	
+	/**
+	 * Like normalize(), but operates solely for side-effects.  This is so it can be used to construct.
+	 */
+	public void normalizeDestructively()
+	{
+        for(BlockFace dir : Util.adjacentDirections())
+		{
+			if(independentFaces.containsKey(dir) && independentFaces.get(dir).isEmpty())
+			{	independentFaces.remove(dir); }// if
+		}// for
+	
+		if(independentFaces.isEmpty())
+        {	this.action = Action.DESTROY; }// if	
+
+	}// normalizeDestructively()
+	
 }// VineDependingBlock

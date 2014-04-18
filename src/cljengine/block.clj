@@ -28,9 +28,10 @@
                           ;; can't pull in all of cljminecraft.player without conflict:
                                         ;[player :only [send-msg]]
                           )
-   (cljengine ;mc
+   (cljengine mc
               [tasks :exclude [map]]
-              [events :exclude [map]]))
+              [events :exclude [map]]
+              ))
   (:import (clojure.lang Keyword
                          Symbol)
            (org.reflections Reflections)
@@ -73,8 +74,15 @@
            (com.github.izbay.regengine.block Action
                                              DependingBlock
                                              VineDependingBlock
+                                             VineDependingBlock$Orientation
                                              DependingBlockSet)
            (com.github.izbay.util Util)))
+
+(def ABOVE VineDependingBlock$Orientation/ABOVE)
+(def BELOW VineDependingBlock$Orientation/BESIDE)
+
+(defn depending-block [block & {:keys [action] :or {action Action/RESTORE}}]
+  (DependingBlock/from block action))
 
 ;; TODO: Should the metatag be ':set' i/s/o 'clojure.core/set'?
 (defmacro def-blocktype-set [name & body]
