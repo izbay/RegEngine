@@ -6,7 +6,10 @@ import org.bukkit.Effect;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
+import org.bukkit.block.BlockState;
+import org.bukkit.block.Chest;
 import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
@@ -73,6 +76,12 @@ public class RegEnginePlugin extends JavaPlugin {
 			if(backup != m){
 				if(!blockMap.containsKey(normal)){
 					blockMap.put(normal, new SerializedBlock(normal.getBlock()));
+					BlockState state = normal.getBlock().getState();
+					if(state instanceof Chest){
+						((Chest)state).getBlockInventory().clear();
+					} else if(state instanceof InventoryHolder){
+						((InventoryHolder)state).getInventory().clear();
+					}
 					normal.getBlock().setType(m);
 					regen(normal);	
 				}
@@ -92,7 +101,7 @@ public class RegEnginePlugin extends JavaPlugin {
 						public void run() {
 							l.getWorld().playEffect(l, Effect.MOBSPAWNER_FLAMES, 2004);
 						}
-					}, 2000L-i);
+					}, 200L-i);
 				}
 			}
 			
@@ -102,10 +111,16 @@ public class RegEnginePlugin extends JavaPlugin {
 					SerializedBlock restore = blockMap.get(l);
 					l.getBlock().setType(Material.getMaterial(restore.type));
 				    l.getBlock().setData(restore.data);
+				    if(restore.inventory.getInventory() != null){
+				    	BlockState state = l.getBlock().getState();
+				    	if(state instanceof Chest){
+				    		((Chest) state).getBlockInventory().setContents(restore.inventory.getInventory());
+				    	} else if(state instanceof InventoryHolder){
+				    		((InventoryHolder) state).getInventory().setContents(restore.inventory.getInventory());
+				    	}
+				    }
 				    blockMap.remove(l);
 				}
-			}, 2000L);
+			}, 200L);
 		}
 }
-
-

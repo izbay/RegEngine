@@ -4,8 +4,11 @@ import java.io.Serializable;
 
 import org.bukkit.Material;
 import org.bukkit.block.Block;
+import org.bukkit.block.Chest;
 import org.bukkit.block.Sign;
 import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.inventory.Inventory;
+import org.bukkit.inventory.InventoryHolder;
 
 public class SerializedBlock implements Serializable {
 	
@@ -15,27 +18,30 @@ public class SerializedBlock implements Serializable {
 	public final String type, world;
 	public final byte data;
 	public final String[] signtext;
+	public final SerializedInventory inventory;
 
 	@SuppressWarnings("deprecation")
 	public SerializedBlock(Block block){
-		//TODO: Do we want server tick number instead of millis?
-		this(System.currentTimeMillis(), block.getWorld().getName(), block.getType().name(), block.getData(), (block.getType() == Material.SIGN)? ((Sign)block).getLines():null );
+		// Unfortunately the nested ternary is required to make the constructor the first instruction of the overloaded constructor.
+		this(block.getWorld().getTime(), block.getWorld().getName(), block.getType().name(), block.getData(), (block.getType() == Material.SIGN)? ((Sign)block).getLines():null, (block.getState() instanceof Chest)?((Chest)block.getState()).getBlockInventory():(block.getState() instanceof InventoryHolder)?((InventoryHolder)block.getState()).getInventory():null);
 	}
 	
-	public SerializedBlock(long date, String world, String type, byte data, String[] signtext) {
+	public SerializedBlock(long date, String world, String type, byte data, String[] signtext, Inventory inventory) {
 		this.date = date;
 		this.world = world;
 		this.type = type;
 		this.data = data;
 		this.signtext = signtext;
+		this.inventory = new SerializedInventory(inventory);
 	}
 
 	public SerializedBlock(FileConfiguration rs) {
 		date = rs.getLong("date");
 		world = rs.getString("world");
 		type = rs.getString("type");
-		data = rs.getByteList("data").get(0); //TODO: Figure out why this is forcing being a list.
+		data = rs.getByteList("data").get(0);
 		signtext = (String[]) rs.getStringList("signtext").toArray();
+		inventory = new SerializedInventory((String[]) rs.getStringList("inventory").toArray());
 	}
 
 	@Override
