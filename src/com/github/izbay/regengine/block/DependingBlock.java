@@ -1,10 +1,12 @@
 package com.github.izbay.regengine.block;
 
-import java.util.EnumMap;
-import java.util.EnumSet;
-import java.util.Map;
-import java.util.Set;
+//import java.lang.reflect.Method;
+//import java.util.EnumMap;
+//import java.util.EnumSet;
+//import java.util.Map;
+//import java.util.Set;
 
+import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
@@ -14,19 +16,20 @@ import org.bukkit.util.BlockVector;
 import org.bukkit.material.Vine;
 
 import com.github.izbay.regengine.BlockImage;
-import com.github.izbay.regengine.block.VineDependingBlock.Orientation;
+//import com.github.izbay.regengine.block.VineDependingBlock.Orientation;
 import com.github.izbay.util.Util;
 
 public class DependingBlock {
 		public final BlockImage block;
-		public /*final*/ Action action;
+		protected /*final*/ Action action;
 		//public final BlockVector coord;
 
 		/**
+		 * Protected because the static factory meth DependingBlock.from() should be chosen instead in most cases.
 		 * @param block
 		 * @param action
 		 */
-		public DependingBlock(BlockImage block, Action action) {
+		protected DependingBlock(BlockImage block, Action action) {
 			super();
 			this.block = block;
 			this.action = action;
@@ -39,17 +42,11 @@ public class DependingBlock {
 		 */
 		public DependingBlock(final DependingBlock d1, final DependingBlock d2)
 		{
-			this(d1.block, (d1.action == Action.DESTROY ? Action.DESTROY : (d2.action == Action.DESTROY ? Action.DESTROY : Action.RESTORE)) );
+			this(d1.block, (d1.action == Action.DESTROY ? Action.DESTROY : 
+					(d2.action == Action.DESTROY ? Action.DESTROY : 
+						(d1.action == Action.RESTORE_AFTER_LOSS || d2.action == Action.RESTORE_AFTER_LOSS) ? Action.RESTORE_AFTER_LOSS : Action.RESTORE)) );
 			if(!d1.coord().equals(d2.coord()))  { throw new IllegalArgumentException(); }
 		}// ctor
-		
-		public BlockVector coord() {	return block.getBlockVector(); }
-		
-		public DependingBlock setAction(final Action act)
-		{ return new DependingBlock(block, act); }
-		
-		public Material getType()
-		{	return block.getType(); }
 		
 		/**
 		 * A 'DESTROY' action in either block will override any type in the other.  
@@ -79,6 +76,7 @@ public class DependingBlock {
 
 		}// 
 */	
+
 		public static DependingBlock from(final Block b, final Action act)
 		{	return DependingBlock.from(new BlockImage(b), act);	}
 
@@ -97,6 +95,12 @@ public class DependingBlock {
 		{	return DependingBlock.from(b, Action.DESTROY);	}
 		*/
 
+		/**
+		 * Factory method.
+		 * @param b
+		 * @param act
+		 * @return
+		 */
 		public static DependingBlock from(final BlockImage b, final Action act)
 		{
 			switch(b.getType())
@@ -104,21 +108,73 @@ public class DependingBlock {
 			case VINE:
 				return new VineDependingBlock(b, act);
 			default:
-				return new DependingBlock(b, act);
+				if(BlockTypes.duple.contains(b.getType()))
+				{	return new CompoundDependingBlock(b, act); }// if
+				else return new DependingBlock(b, act);
 			}// switch
 		}// DependingBlock.from()
 		
+		public Action action()
+		{	return this.action;	}
 	
 	//public DependingBlockSet 
-	
-	public DependingBlockSet doubleBlockFwdDependency(final DependingBlock b)
-	{
-		final DependingBlockSet set = new DependingBlockSet();
-		// FIXME: Nonfunctional.
 		
+				
+		public BlockVector coord() {	return block.getBlockVector(); }
+		
+		public DependingBlock setAction(final Action act)
+		{ return new DependingBlock(block, act); }
+		
+		public Material getType()
+		{	return block.getType(); }
 
+		public Location getLocation()
+		{	return block.getLocation(); }
+		
+	public DependingBlockSet gravityBoundFwdDependency()
+	{
+		final Block bAbove = Util.getBlockAbove(this.block);
+		if( BlockTypes.gravityBound.contains(bAbove.getType()) )
+		{	return new DependingBlockSet(DependingBlock.from(bAbove, Action.RESTORE_AFTER_LOSS)); }// if
+		else
+		{	return DependingBlockSet.emptySet(); }// else
+	}// gravityBoundFwdDependency()
+
+	public DependingBlockSet gravityBoundRevDependency()
+	{
+		if( BlockTypes.gravityBound.contains(block.getType()) )
+		{	return new DependingBlockSet(DependingBlock.from(block, Action.RESTORE)); }
+		else return DependingBlockSet.emptySet(); 	
+	}// gravityBoundRevDependency()
+
+	// Component blocks of compounds are mutually dependent.  The forward and reverse dependency checks are, in this case, the same.
+	public DependingBlockSet dupleBlockDependency()
+	{
+		if(BlockTypes.duple.contains(this.getType()))
+		{
+			assert( this instanceof CompoundDependingBlock );
+			return ((CompoundDependingBlock)this).getEntire();
+		}// if
+		else
+			return DependingBlockSet.emptySet();
+		/*
+		final DependingBlockSet set = new DependingBlockSet();
+		if(BlockTypes.duple.contains(b.getType()))
+		{
+		//	set.add(b);
+			switch(b.getType())
+			{
+			case BED_BLOCK:
+				set.add(DependingBlock.from(BlockTypes.getRestOfBed(b.block.getBlockState()), b.action);
+				break;
+			case WOODEN_DOOR:
+					
+			}
+		}// if
 		return set;
-	}// doubleBlockDependency()
+		*/
+	}// dupleBlockDependency()
+	
 	
 	public DependingBlockSet attachmentFwdDependency()
 	{
@@ -143,9 +199,6 @@ public class DependingBlock {
 		
 		return set;
 	}// attachmentRevDependency()
-	
-	
-	
 	
 	public DependingBlockSet portalFwdDependency()
 	{
@@ -182,7 +235,6 @@ public class DependingBlock {
 	}// portalRevDependency()
 	
 	
-	
 	public DependingBlockSet vineFwdDependency()
 	{
 		final DependingBlock b = this;
@@ -195,12 +247,8 @@ public class DependingBlock {
 				final VineDependingBlock vb = (VineDependingBlock)(DependingBlock.from(bBel, Action.RESTORE));
 
 				// Clojure equivalent of the following paragraph: (zipmap (adjacent-directions) (repeat #{Orientation/ABOVE, Orientation/BESIDE}))
-				final Map<BlockFace,Set<Orientation>> subtrahend = new EnumMap<BlockFace,Set<Orientation>>(BlockFace.class);
-				for(BlockFace dir : Util.adjacentDirections())
-				{ subtrahend.put(dir, EnumSet.of(Orientation.ABOVE, Orientation.BESIDE)); }
-				assert(subtrahend.size() == 4);
 
-				set.add(vb.difference(subtrahend));
+				set.add(vb.difference(VineDependingBlock.subtrahendOverhead()));
 			}// if
 		}// if
 		// TODO: This may not be accurate enough, so find a better criterion for when a vine can be stuck to a block:
@@ -213,11 +261,7 @@ public class DependingBlock {
 				{
 					final VineDependingBlock vb = (VineDependingBlock)(DependingBlock.from(bAdj, Action.RESTORE));
 
-					final Map<BlockFace,Set<Orientation>> subtrahend = new EnumMap<BlockFace,Set<Orientation>>(BlockFace.class);
-					subtrahend.put(dir, EnumSet.of(Orientation.BESIDE));
-					assert(subtrahend.size() == 1);
-
-					set.add(vb.difference(subtrahend));
+					set.add(vb.difference(VineDependingBlock.subtrahendAdjacent(dir)));
 				}// if
 			}// for
 		}// elif
@@ -246,16 +290,32 @@ public class DependingBlock {
 		
 		return set;
 	}// vineRevDependency()
+	public DependingBlockSet supportFwdDependency()
+	{
+		final Block bAbove = Util.getBlockAbove(this.block);
+		if( BlockTypes.needingSupport.contains(bAbove.getType()) )
+		{ return new DependingBlockSet(DependingBlock.from(bAbove, Action.DESTROY)); }
+		else
+		{	return DependingBlockSet.emptySet(); }// else
+	}// supportFwdDependency()
+	
+	public DependingBlockSet supportRevDependency()
+	{
+		if( BlockTypes.needingSupport.contains(this.block.getType()) )
+		{
+			return new DependingBlockSet(DependingBlock.from(Util.getBlockBelow(block), Action.RESTORE));
+		}// if
+		else return DependingBlockSet.emptySet(); 
+	}// supportRevDependency()
 
 	public DependingBlockSet allFwdDependencies()
-	{
-		// TODO: All the rest!
-		return DependingBlockSet.union(DependingBlockSet.union(this.attachmentFwdDependency(), this.portalFwdDependency()), this.vineFwdDependency());
-	}// allFwdDependencies()
+	{ return DependingBlockSet.union(DependingBlockSet.union(DependingBlockSet.union(DependingBlockSet.union(DependingBlockSet.union(this.dupleBlockDependency(), this.attachmentFwdDependency()), this.portalFwdDependency()), this.vineFwdDependency()), this.gravityBoundFwdDependency()), this.supportFwdDependency()); }// allFwdDependencies()
+
+	//public static final Method[] forwardDependencies = { supportRevDependency };
 	
+	// NB: At the moment, the forward & reverse searches include a common phase.  Can we factor out the 'compound block' part of the search so we run it only once per block?
 	public DependingBlockSet allRevDependencies()
-		// TODO: All the rest!
-	{ return DependingBlockSet.union(DependingBlockSet.union(this.attachmentRevDependency(), this.portalRevDependency()), this.vineRevDependency()); }
+	{ return DependingBlockSet.union(DependingBlockSet.union(DependingBlockSet.union(DependingBlockSet.union(DependingBlockSet.union(this.dupleBlockDependency(), this.attachmentRevDependency()), this.portalRevDependency()), this.vineRevDependency()), this.gravityBoundRevDependency()), this.supportRevDependency()); }
 	
 	public Block getBlockAbove()
 	{ return Util.getBlockAbove(this.block); }// getBlockAbove()

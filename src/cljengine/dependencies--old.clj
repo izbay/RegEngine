@@ -359,6 +359,9 @@
            double-plant,
            tripwire})))
 
+(comment
+  "For converting to a Javafiable form:"
+  (pprint (map first (map :material (map #(list-to-map (nthrest (find-block-type %) 2)) +materials-needing-support+)))))
 ;(defprotocol )
 
 (defrecord DependentBlock [block action])
@@ -400,7 +403,7 @@
               (let [type (get-type b)]
                 (cond*
                  [(or (= type Material/WOODEN_DOOR)
-                      (= type Material/IRON_DOOR))
+                      (= type Material/IRON_DOOR_BLOCK))
                   (basic-deps b (get-rest-of-door b))]
                  [(= type Material/BED_BLOCK)
                   (basic-deps b (get-rest-of-bed b))]

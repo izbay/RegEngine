@@ -32,10 +32,11 @@ public class VineDependingBlock extends DependingBlock
 	public Map<BlockFace,Set<Orientation>> independentFaces; 
 
 	/**
+	 * Use
 	 * @param block
 	 * @param action
 	 */
-	public VineDependingBlock(BlockImage block, Action action) {
+	protected VineDependingBlock(BlockImage block, Action action) {
 		super(block, action);
 		if(block.getType() != Material.VINE)
 		{	throw new IllegalArgumentException(); }
@@ -117,7 +118,7 @@ public class VineDependingBlock extends DependingBlock
 	 */
 	public VineDependingBlock(final VineDependingBlock rhs)
 	{
-		super(rhs.block, rhs.action);
+		super(rhs.block, rhs.action());
 		this.vineCoveredFaces = new HashSet<BlockFace>(rhs.vineCoveredFaces);
 		this.independentFaces = new EnumMap<BlockFace,Set<Orientation>>(rhs.independentFaces);
 		// Deep-copy the sets:
@@ -200,4 +201,21 @@ public class VineDependingBlock extends DependingBlock
 
 	}// normalizeDestructively()
 	
+	public static Map<BlockFace,Set<Orientation>> subtrahendAdjacent(final BlockFace dir)
+	{
+        final Map<BlockFace,Set<Orientation>> subtrahend = new EnumMap<BlockFace,Set<Orientation>>(BlockFace.class);
+        subtrahend.put(dir, EnumSet.of(Orientation.BESIDE));
+        assert(subtrahend.size() == 1);
+        return subtrahend;
+	}
+
+	public static Map<BlockFace,Set<Orientation>> subtrahendOverhead()
+	{
+				final Map<BlockFace,Set<Orientation>> subtrahend = new EnumMap<BlockFace,Set<Orientation>>(BlockFace.class);
+				for(BlockFace dir : Util.adjacentDirections())
+				{ subtrahend.put(dir, EnumSet.of(Orientation.ABOVE/*, Orientation.BESIDE*/)); }
+				assert(subtrahend.size() == 4);
+				return subtrahend;
+	}// subtrahend()
+
 }// VineDependingBlock

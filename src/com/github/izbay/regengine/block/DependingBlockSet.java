@@ -4,7 +4,8 @@ package com.github.izbay.regengine.block;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
-import java.util.LinkedList;
+//import java.util.Set;
+//import java.util.LinkedList;
 //import java.util.Iterator;
 //import java.util.HashSet;
 import java.util.Map;
@@ -16,9 +17,12 @@ import org.bukkit.util.BlockVector;
 import com.github.izbay.regengine.BlockImage;
 //import com.github.izbay.util.Util;
 
-public class DependingBlockSet 
+public class DependingBlockSet implements Iterable<DependingBlock>
 {
 	public final Map<BlockVector,DependingBlock> blocks;
+	
+	public Iterator<DependingBlock> iterator()
+	{	return blocks.values().iterator(); }
 	
 	// Default constructor:
 	public DependingBlockSet()
@@ -63,6 +67,19 @@ public class DependingBlockSet
 		}// for
 	}// ctor
 
+	/**
+	 * Creates a singleton set.
+	 * @param b
+	 */
+	public DependingBlockSet(final DependingBlock b)
+	{
+		this();
+		this.add(b);
+	}// ctor
+	
+	public static DependingBlockSet emptySet()
+	{	return new DependingBlockSet(); }
+	
 	/**
 	 * Warning: Mutator!
 	 * @param b
@@ -109,10 +126,20 @@ public class DependingBlockSet
 	public boolean isEmpty()
 	{	return this.blocks.isEmpty(); }
 	
+	public int size()
+	{	return blocks.size(); }
+	
 	public static DependingBlockSet union(final DependingBlockSet s1, final DependingBlockSet s2)
 	{ return new DependingBlockSet(s1, s2); }
+	
+/*	public static DependingBlockSet union(final DependingBlockSet[] sets)
+	{
+		if(sets.length < 2) throw new IllegalArgumentException();
+
+	}
+	*/
 		
-	DependingBlockSet doFwdDepsSearch()
+	public DependingBlockSet doFwdDepsSearch()
 	{
 		final DependingBlockSet sIn = this;
 		final DependingBlockSet sOut = new DependingBlockSet(sIn); 
@@ -122,10 +149,10 @@ public class DependingBlockSet
 		for(BlockVector v : sIn.blocks.keySet())
 		{
 			final DependingBlock d = sIn.blocks.get(v);
-			if(d.action == Action.DESTROY) sSearch.put(v,d);
+			if(d.action().isHardDependency()) sSearch.put(v,d);
 		}// for
 		
-		while(!sIn.blocks.isEmpty())
+		while(!sSearch.isEmpty())
 		{
 			final Iterator<DependingBlock> it = sSearch.values().iterator();
 			final DependingBlock b = it.next();
@@ -140,7 +167,7 @@ public class DependingBlockSet
 				{
 					sOut.add(dDep);
 					assert(!sSearch.containsKey(dDep.coord()));
-					if(dDep.action == Action.DESTROY)
+					if(dDep.action().isHardDependency())
 					{ sSearch.put(v, dDep); }
 				}// if
 				else // sOut contains dDep
@@ -150,13 +177,13 @@ public class DependingBlockSet
 					else
 					{
 						assert(sSearch.get(v).equals(sOut.blocks.get(v)));
-						if(dDep.action == Action.DESTROY 
-								&& sSearch.get(v).action != Action.DESTROY)
+						if(dDep.action().isHardDependency() 
+								&& !sSearch.get(v).action().isHardDependency())
 						{
 							sSearch.put(v, dDep);
 							sOut.blocks.put(v,dDep);
-							assert(sSearch.get(v).action == Action.DESTROY);
-							assert(sOut.blocks.get(v).action == Action.DESTROY);
+							assert(sSearch.get(v).action().isHardDependency());
+							assert(sOut.blocks.get(v).action().isHardDependency());
 						}// if
 					}// else
 				}// else
@@ -167,36 +194,40 @@ public class DependingBlockSet
 		return sOut;
 	}// doFwdDepsSearch()
 
-	DependingBlockSet doRevDepsSearch()
+	public DependingBlockSet doRevDepsSearch()
 	{
 		final DependingBlockSet sIn = this;
 		final DependingBlockSet sOut = new DependingBlockSet(sIn); 
 		final DependingBlockSet sSearch = new DependingBlockSet(sIn);
 		
-		while(!sIn.isEmpty())
+		while(!sSearch.isEmpty())
 		{
 			final Iterator<DependingBlock> it = sSearch.blocks.values().iterator();
 			final DependingBlock b = it.next();
 			it.remove();
 			
 			final DependingBlockSet sD = b.allRevDependencies();
-			for(BlockVector vDep : sD.blocks.keySet())
+			for(Map.Entry<BlockVector,DependingBlock> entry : sD.blocks.entrySet())
+			//for(BlockVector vDep : sD.blocks.keySet())
 			{
-				final DependingBlock dDep = sD.blocks.get(vDep);
-				assert(dDep.action != Action.DESTROY);
-				if(!sSearch.contains(vDep))
+				//final DependingBlock dDep = sD.blocks.get(vDep);
+				assert(!entry.getValue().action().isHardDependency());
+				if(!sSearch.contains(entry.getKey()))
 				{
-					sSearch.add(dDep);
-					if(!sOut.contains(vDep))
-					{	sOut.add(dDep);	}// if
+					sSearch.add(entry.getValue());
+					if(!sOut.contains(entry.getKey()))
+					{	sOut.add(entry.getValue());	}// if
 				}// if
 				else
 				{	
-					assert(!sOut.contains(vDep));
+					assert(!sOut.contains(entry.getKey()));
 				}// else
 			}// for
 		}// while
 
 		return sOut;
     }// doRevDepsSearch()
+	
+	public DependingBlockSet doFullDependencySearch()
+	{ return this.doFwdDepsSearch().doRevDepsSearch(); }
 }// DependingBlockSet

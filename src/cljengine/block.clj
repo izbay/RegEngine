@@ -28,7 +28,7 @@
                           ;; can't pull in all of cljminecraft.player without conflict:
                                         ;[player :only [send-msg]]
                           )
-   (cljengine mc
+   (cljengine [mc :exclude [map]]
               [tasks :exclude [map]]
               [events :exclude [map]]
               ))
@@ -81,8 +81,24 @@
 (def ABOVE VineDependingBlock$Orientation/ABOVE)
 (def BELOW VineDependingBlock$Orientation/BESIDE)
 
-(defn depending-block [block & {:keys [action] :or {action Action/RESTORE}}]
+(def DESTROY Action/DESTROY)
+(def RESTORE Action/RESTORE)
+
+(defn depending-block [block & {:keys [action] :or {action Action/DESTROY}}]
   (DependingBlock/from block action))
+
+(defn depending-block-set [block & {:keys [action] :or {action Action/DESTROY} :as rest} ]
+  (DependingBlockSet. (apply depending-block block rest)))
+
+(do
+  (defmulti do-fwd-deps-search class)
+  (defmethod do-fwd-deps-search Block [b]
+    (.doFwdDepsSearch (depending-block-set b))))
+
+(do
+  (defmulti do-rev-deps-search class)
+  (defmethod do-rev-deps-search Block [b]
+    (.doRevDepsSearch (depending-block-set b))))
 
 ;; TODO: Should the metatag be ':set' i/s/o 'clojure.core/set'?
 (defmacro def-blocktype-set [name & body]
@@ -749,7 +765,7 @@ NB: Returns 'nil' if no dependencies found unless the :error keyword arg is set,
       (some (fn [%]
               (and (depends-on? % b2)
                    (≻ b1 %)))
-            (neighboring-blocks b2))))
+            (surrounding-blocks b2))))
 
 (definline ≻ [b1 b2]
   `(depends-on-indirectly? ~b1 ~b2))
@@ -828,7 +844,7 @@ NB: Returns 'nil' if no dependencies found unless the :error keyword arg is set,
                   (mc/assert* (>= (count re-set') (count re-set)))
                   re-set'))))
 
-(defn calc-re-blocks [init-re-set]
+#_(defn calc-re-blocks [init-re-set]
   (mc/satisfying set?
               (letfn [(calc-re-blocks' [b acc]
                         (union acc

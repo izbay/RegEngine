@@ -60,14 +60,22 @@
                                  BukkitTask)
            (cljminecraft BasePlugin
                          ClojurePlugin)
-           (org.bukkit.util BlockIterator)
-           (com.github.izbay.regengine RegEnginePlugin
-                                       BlockImage)))
+           (org.bukkit.util BlockIterator) )
+  (:import (com.github.izbay.regengine RegEnginePlugin
+                                       BlockImage
+                                       RegenBatch)
+           (com.github.izbay.regengine.block Action
+                                             BlockTypes
+                                             DependingBlock
+                                             VineDependingBlock
+                                             VineDependingBlock$Orientation
+                                             DependingBlockSet)
+           (com.github.izbay.util Util)))
 
                                         ;(declare physics-blocking-handler, player-move-event-handler)
 
 
-(load "dependencies")
+;(load "dependencies")
 
 (defonce ^{:doc "Default number of ticks between backup & restoration." :dynamic true}
   regen-total-delay (seconds-to-ticks 20))
@@ -269,27 +277,30 @@ If *log-physics-events* is set to :record, this will also be stored into the *ph
            (assert* (not-any? #(= (get-type %) new-material) legit-blocks))
            (if (empty? legit-blocks) (debug-announce "The %s block%s in <target region> %s already %s!" (count blocks) (pluralizes? (count blocks)) (if (> (count blocks) 1) "are" "is") new-material)
                (let [images (doall (map #(BlockImage. %) legit-blocks))
-                     icnt (count images)]
-                 (assert* (== (count legit-blocks) icnt))
-                 (assert* (not-any? #(= (.getType %) new-material) images) "Bad image!")
-                 (swap! latest-altered-region (constantly images)) ; Make a note in case we fail the operation
-                 (assert* (== icnt (count @latest-altered-region)))
-                 (debug-announce "Altering %s block%s: %s." icnt (pluralizes? icnt) (get-full-time))
-                 (doseq [i images]
-                   (abort-on-emergency-break!)
+                     initial-set (DependingBlockSet. (map #(DependingBlock/from % Action/DESTROY) images)) ]
+                 (let [full-set (.. (the DependingBlockSet initial-set) doFullDependencySearch )
+                       icnt (.size full-set)]
+                   ;(assert* (== (count legit-blocks) icnt))
+                   ;(assert* (not-any? #(= (.getType %) new-material) images) "Bad image!")
+                   (swap! latest-altered-region (constantly images)) ; Make a note in case we fail the operation
+                   (assert* (== icnt (count @latest-altered-region)))
+                   (debug-announce "Altering %s block%s: %s." icnt (pluralizes? icnt) (get-full-time))
+                   (doseq [b full-set]
+                     (let [i (the BlockImage (.block (the DependingBlock b)))]
+                       (abort-on-emergency-break!)
                                         ;(debug-println "Altering block.")
-                   (alter-block (get-block-at (.getLocation i)) :new-material new-material)
-                   (debug-println (format "@ %s: Block at %s, changing %s -> %s." (get-full-time) (format-vector (get-vector i)) (get-type i) new-material))
-                   (assert* (= (.getType (get-block-at (.getLocation i))) new-material)))
-                 (debug-announce "Altered %s block(s): %s." icnt (get-full-time))
-                 (assert* (== icnt (count images) (count @latest-altered-region)))
-                 ;; Massive assert:
-                 (assert* (do
-                            (when (not-every? #(= new-material (get-type (get-block-at (get-location %))))
-                                              images)
-                              (debug-announce "Warning from (alter-region)--not all blocks were successfully changed!"))
-                            true))
-                 images)))))))
+                       (alter-block (get-block-at (.getLocation i)) :new-material new-material)
+                       (debug-println (format "@ %s: Block at %s, changing %s -> %s." (get-full-time) (format-vector (get-vector i)) (get-type i) new-material))
+                       (assert* (= (.getType (get-block-at (.getLocation i))) new-material))))
+                   (debug-announce "Altered %s block(s): %s." icnt (get-full-time))
+                   (assert* (== icnt (count images) (count @latest-altered-region)))
+                   ;; Massive assert:
+                   (assert* (do
+                              (when (not-every? #(= new-material (get-type (get-block-at (get-location %))))
+                                                images)
+                                (debug-announce "Warning from (alter-region)--not all blocks were successfully changed!"))
+                              true))
+                   images))))))))
 
 (do
   (defmulti alter-region

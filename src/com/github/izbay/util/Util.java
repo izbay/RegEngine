@@ -116,6 +116,9 @@ public abstract class Util
 		public static BlockVector add(final BlockVector v, final BlockFace direction)
 		{	return  Util.add(v, direction.getModX(), direction.getModY(), direction.getModZ()); }
 		
+		public static Location add(final Location l, final BlockFace direction)
+		{	return  Util.add(l, direction.getModX(), direction.getModY(), direction.getModZ()); }
+
 		public static Block add(final Block b, final int x, final int y, final int z)
 		{	return getBlockAt(Util.add(b.getLocation(), x, y, z)); }
 
@@ -130,6 +133,9 @@ public abstract class Util
 		
 		public static Block getBlockBelow(final Vector v)
 		{ return getBlockAt(Util.add(v, 0, -1, 0)); }
+		
+		public static Block getBlockBelow(final BlockImage i)
+		{	return getBlockAt(add(i.getLocation(), 0, -1, 0)); }
 		
 		public static Block getBlockBelow(final Location l)
 		{	return getBlockAt(l.clone().add(0, -1, 0)); }
