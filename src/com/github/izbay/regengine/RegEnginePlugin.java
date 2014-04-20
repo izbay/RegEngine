@@ -30,7 +30,7 @@ public class RegEnginePlugin extends JavaPlugin
 {
 //		private HashMap<Location, Material> blockMap = new HashMap<Location,Material>();
 		private HashMap<Location, SerializedBlock> blockMap = new HashMap<Location,SerializedBlock>();
-		private HashMap<Location, Byte> dataMap = new HashMap<Location,Byte>();
+//		private HashMap<Location, Byte> dataMap = new HashMap<Location,Byte>();
 		private FileConfiguration config;
 		/**
 		 * Config-file keystrings, because I amuse myself idly by turning things like these into constants.
@@ -90,6 +90,7 @@ public class RegEnginePlugin extends JavaPlugin
 			// Load Clojure REGENgine implementation:
 			if (clojureRegen)
 			{
+				/*
 				try {
 					RT.loadResourceScript("cljengine/regen.clj");
 					RT.var("cljengine.mc", "*debug-print*", true);// Set to false to make (debug-print) can it
@@ -99,11 +100,12 @@ public class RegEnginePlugin extends JavaPlugin
 					// TODO Auto-generated catch block
 					e1.printStackTrace();
 				}
+				*/
 			}// if
 		}// onEnable()
 		
 		
-		
+/*
 		@SuppressWarnings("deprecation")
 		public void alter(Location l, Material m){
 			if (clojureRegen)
@@ -119,7 +121,7 @@ public class RegEnginePlugin extends JavaPlugin
 				}
 			}// else
 		}// alter()
-			
+*/			
 		public void alter(Plugin plugin, Location l, Material m){
 			Location normal = Util.normalizeLocation(l);
 			Material backup = normal.getBlock().getType();
@@ -138,12 +140,15 @@ public class RegEnginePlugin extends JavaPlugin
 			}
 		}
 		
+		/*
 		public void alter(Plugin plugin, final Vector v, final Material m)
 		{	alter(plugin, Util.getLocation(v), m); }
 		
 		public void alter(Plugin plugin, final Block b, final Material m)
 		{	alter(plugin, b.getLocation(), m); }
+		*/
 		
+		/*
 		private void regen(final Location l){
 			if(doParticles){
 				for(int i=0; i<60; i+=10){
@@ -173,8 +178,11 @@ public class RegEnginePlugin extends JavaPlugin
 				}
 			}, 200L);
 		}
-}
-		// Ad-hoc polymorphism.
+		
+			*/
+
+		/*
+	// Ad-hoc polymorphism.
 		public void alter(Location l){
 			alter(l, Material.AIR);
 		}
@@ -182,7 +190,9 @@ public class RegEnginePlugin extends JavaPlugin
 		{	alter(Util.getLocation(v), m); }
 		public void alter(final Block b, final Material m)
 		{	alter(b.getLocation(), m); }
+		*/
 
+/*
 		// It's ugly, but this is the simplest way to invoke Lisp functions from Java: convert the Java lvars into Clojure globals and follow up with eval().
 		public void alterRestore(final Location loc, final Material m)
 		{
@@ -195,7 +205,7 @@ public class RegEnginePlugin extends JavaPlugin
 			Compiler.eval(obj);
 		}// alterRestore()
 		
-		public void batchAlterRestore(/*final Collection<Location>*/ final Location[] blocks, final Material m, final World w)
+		public void batchAlterRestore(/*final Collection<Location> final Location[] blocks, final Material m, final World w)
 		{
 			RT.var("cljengine.regen", "alter-restore-blocks", blocks);
 			RT.var("cljengine.regen", "alter-restore-mat", m);
@@ -207,7 +217,7 @@ public class RegEnginePlugin extends JavaPlugin
 		}// batchAlterRestore()
 
 		// Duplicating the preceding Clojure def. is pretty clumsy:
-		public void batchAlterRestore(/*final Collection<BlockVector>*/ final BlockVector[] blocks, final Material m, final World w)
+		public void batchAlterRestore(/*final Collection<BlockVector> final BlockVector[] blocks, final Material m, final World w)
 		{
 			RT.var("cljengine.regen", "alter-restore-blocks", blocks);
 			RT.var("cljengine.regen", "alter-restore-mat", m);
@@ -221,6 +231,7 @@ public class RegEnginePlugin extends JavaPlugin
 		}// batchAlterRestore()
 		
 		
+*/
 		// The first prototype:
 		private void regen(final Location l){
 			if(doParticles){
