@@ -1,13 +1,13 @@
 package com.github.izbay.regengine;
 
-import java.io.IOException;
+//import java.io.IOException;
 import java.util.HashMap;
 
 import org.bukkit.Effect;
 import org.bukkit.Location;
 import org.bukkit.Material;
-import org.bukkit.World;
-import org.bukkit.block.Block;
+//import org.bukkit.World;
+//import org.bukkit.block.Block;
 import org.bukkit.block.BlockState;
 import org.bukkit.block.Chest;
 import org.bukkit.configuration.file.FileConfiguration;
@@ -15,8 +15,8 @@ import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
-import org.bukkit.util.BlockVector;
-import org.bukkit.util.Vector;
+//import org.bukkit.util.BlockVector;
+//import org.bukkit.util.Vector;
 
 /*
 import clojure.lang.RT;
