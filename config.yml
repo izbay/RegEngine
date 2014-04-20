@@ -1,2 +1,3 @@
 check-update: true #automatically checks for updates. Set to false to disable.
 do-particles: true #use particle effects to warn players before a block is changed?
+use-clojure-regen: true
