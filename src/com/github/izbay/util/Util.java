@@ -18,16 +18,11 @@ import org.bukkit.util.Vector;
 
 import com.github.izbay.regengine.BlockImage;
 
-/**
- * @author jdjs
- *
- */
-/**
- * @author J. Jakes-Schauer
- *
- */
 public abstract class Util 
 {
+	public static double toRadians(double yaw){
+		return (270-yaw) * Math.PI / 180;
+	}
 		public static BlockVector getBlockVector(final Location l) {
 			return new BlockVector((int) l.getX(), (int) l.getY(),
 					(int) l.getZ());
