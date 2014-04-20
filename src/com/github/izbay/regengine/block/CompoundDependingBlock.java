@@ -14,6 +14,36 @@ public class CompoundDependingBlock extends DependingBlock
 	
 	public final Position position;
 
+	// Merge constructor.
+	public CompoundDependingBlock(final CompoundDependingBlock d1, final CompoundDependingBlock d2)
+	{
+		super(d1, d2);
+		if(d1.position != d2.position) throw new IllegalArgumentException("Bad matchup in dyadic CompoundDependingBlock ctor.");
+		this.position = d1.position;
+	}// ctor
+	
+	// Copy constructor.
+	public CompoundDependingBlock(final CompoundDependingBlock rhs)
+	{
+		super(rhs.block, rhs.action());
+		this.position = rhs.position;
+	}// ctor
+	
+
+	/**
+	 * A 'DESTROY' action in either block will override any type in the other.  
+	 * TODO: Show that this method is commutative.
+	 * @param d2
+	 * @return
+	 */
+	@Override
+	public CompoundDependingBlock mergeWith(final DependingBlock d2)
+	{
+		if(!(d2 instanceof CompoundDependingBlock)) throw new IllegalArgumentException(); 
+		//if(this.coord() != d2.coord()) { throw new IllegalArgumentException(); }
+		return new CompoundDependingBlock(this, (CompoundDependingBlock)(d2));
+	}// mergeWith()
+
 
 	/**
 	 * Use DependingBlock.from().
@@ -99,12 +129,9 @@ public class CompoundDependingBlock extends DependingBlock
 		{	set.add(other);	}// if
 		return set;
 	}// getEntire()
-
+	
 	/*
-	public CompoundDependingBlock(DependingBlock d1, DependingBlock d2) {
-		super(d1, d2);
-		// TODO Auto-generated constructor stub
-	}
+	public static DependingBlockSet getEntire(final )
 	
 	public static DependingBlock from(final BlockImage b, final Action act)
 	{

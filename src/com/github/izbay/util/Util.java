@@ -91,8 +91,8 @@ public abstract class Util
 		public static Block getBlockAt(final Location l)
 		{ return getCurrentWorld().getBlockAt(l); }
 
-		public static Block getBlockAt(final Vector v)
-		{	return getCurrentWorld().getBlockAt( v.getBlockX(), v.getBlockY(), v.getBlockZ()); }
+		public static Block getBlockAt(final Vector v, final World world)
+		{	return world.getBlockAt( v.getBlockX(), v.getBlockY(), v.getBlockZ()); }
 		
 		public static Location getLocation(final Vector v)
 		{ 	return v.toLocation(getCurrentWorld()); }
@@ -131,8 +131,8 @@ public abstract class Util
 		public static Block getBlockAbove(final BlockImage i)
 		{	return getBlockAt(add(i.getLocation(), 0, 1, 0)); }
 		
-		public static Block getBlockBelow(final Vector v)
-		{ return getBlockAt(Util.add(v, 0, -1, 0)); }
+		public static Block getBlockBelow(final Vector v, final World world)
+		{ return getBlockAt(Util.add(v, 0, -1, 0), world); }
 		
 		public static Block getBlockBelow(final BlockImage i)
 		{	return getBlockAt(add(i.getLocation(), 0, -1, 0)); }
@@ -141,7 +141,7 @@ public abstract class Util
 		{	return getBlockAt(l.clone().add(0, -1, 0)); }
 		
 		public static Block getBlockBelow(final Block b)
-        { return getBlockAt(new Vector(b.getX(), b.getY()-1, b.getZ())); }
+		{	return add(b.getLocation(), BlockFace.DOWN).getBlock(); }
 		
 		public static BlockFace[] adjacentDirections()
 		{ return new BlockFace[] { BlockFace.NORTH, BlockFace.SOUTH, BlockFace.EAST, BlockFace.WEST }; }

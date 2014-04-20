@@ -3,10 +3,13 @@
 
 ;; TODO: Continue with changing '*...*' to '+...+' notation.
 
+(comment " Try running the following in Emacs Lisp to get the REPL going: "
+         '(progn
+           (cider "127.0.0.1" 4005)
+           (cider-interactive-eval-to-repl "(in-ns 'cljengine.block)")
+           (cider-switch-to-current-repl-buffer)
+           (paredit-mode)))
 
-(comment
-  "The new system:
-    - If a block is ")
 
 
 (ns cljengine.block
@@ -89,16 +92,104 @@
 
 (defn depending-block-set [block & {:keys [action] :or {action Action/DESTROY} :as rest} ]
   (DependingBlockSet. (apply depending-block block rest)))
+(do
+  (defmulti all-rev-deps class)
+  (defmethod all-rev-deps DependingBlock [b]
+    (.allRevDependencies b))
+  (defmethod all-rev-deps Block [b]
+    (.allRevDependencies (depending-block b))))
+
+(declare deps)
+
+(do
+  (defmulti proxy-rev-dependency class)
+  (defmethod proxy-rev-dependency Block [b]
+    (proxy-rev-dependency (depending-block b)))
+  (defmethod proxy-rev-dependency DependingBlock [b]
+    (proxy-rev-dependency (DependingBlockSet. b)))
+  (defmethod proxy-rev-dependency DependingBlockSet [ds]
+    (let [sOut (DependingBlockSet. ds)
+          sSearch (DependingBlockSet. ds)]
+      (with-local-vars [c 0]
+        (while (not (.isEmpty sSearch))
+          (var-set c (+ @c 1))
+          (when (> @c 20) (throw (Error. "Too many iterations!")))
+          (let [b (first (.. sSearch blocks values))]
+            (.. sSearch blocks (remove (.coord b)))
+            (assert* (not (. (. sSearch blocks) containsKey (.coord b))))
+            (let [sD (all-rev-deps b)]
+              (doseq [entry (.. sD blocks entrySet)]
+                                        ;            (assert* (not (.. entry getValue action isHardDependency)))
+                (if (not (.contains sOut (the BlockVector (. entry getKey))))
+                  (do
+                    (debug-println entry (deps (. entry getValue)))
+                    (. sSearch add (. entry getValue))
+;                    (. (. sSearch blocks) put (. entry getKey) (. entry getValue))
+                    (when (not (. sOut contains (the BlockVector (. entry getKey))))
+                      (. sOut add (. entry getValue))
+                      ;(. (. sOut blocks) put (. entry getKey) (. entry getValue))
+                      (assert* (. sOut contains (the BlockVector (. entry getKey))))))
+                  (do
+                                        ;(assert* (not (. sOut contains (. entry getKey))))
+                    )))))))
+      sOut)))
+
+
+(def vine-fwd-dependency (memfn vineFwdDependency))
+(def gravity-bound-fwd-dependency (memfn gravityBoundFwdDependency))
+(def portal-fwd-dependency (memfn portalFwdDependency))
+(def portal-rev-dependency (memfn portalRevDependency))
 
 (do
   (defmulti do-fwd-deps-search class)
+  (defmethod do-fwd-deps-search DependingBlockSet [s]
+    (.doFwdDepsSearch s))
+  (defmethod do-fwd-deps-search DependingBlock [s]
+    (.doFwdDepsSearch (depending-block-set s)))
   (defmethod do-fwd-deps-search Block [b]
     (.doFwdDepsSearch (depending-block-set b))))
 
 (do
   (defmulti do-rev-deps-search class)
+  (defmethod do-rev-deps-search DependingBlockSet [s]
+    (.doRevDepsSearch s))
   (defmethod do-rev-deps-search Block [b]
     (.doRevDepsSearch (depending-block-set b))))
+
+(do
+  (defmulti do-full-deps-search class)
+  (defmethod do-full-deps-search Block [b]
+    (.doFullDependencySearch (depending-block-set b)))
+  #_(defmethod do-full-deps-search ))
+
+(defn proxy-do-full-deps-search [dbs]
+  (proxy-rev-dependency (do-fwd-deps-search dbs))
+  ;(do-fwd-deps-search (proxy-rev-dependency))
+  )
+
+(do
+  (defmulti types class)
+  (defmethod types DependingBlockSet [s]
+    (map (memfn getType) (.. s blocks values))))
+
+(do
+  (defmulti acts class)
+  (defmethod acts DependingBlock [b]
+    [(.action b)])
+  (defmethod acts DependingBlockSet [s]
+    (map (memfn action) (.. s blocks values))))
+
+(do
+  (defmulti deps class)
+  (defmethod deps DependingBlock [b]
+    [(.getType b), (.action b)])
+  (defmethod deps DependingBlockSet [s]
+    (map (fn [b] [(.getType b), (.action b)]) (.. s blocks values))))
+
+(do
+  (defmulti fst class)
+  (defmethod fst DependingBlockSet [s]
+    (first (vals (.blocks s)))))
 
 ;; TODO: Should the metatag be ':set' i/s/o 'clojure.core/set'?
 (defmacro def-blocktype-set [name & body]

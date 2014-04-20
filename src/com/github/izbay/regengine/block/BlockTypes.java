@@ -59,7 +59,7 @@ Arrays.asList(new Material[]
 	
 	public static final EnumSet<Material> gravityBound = EnumSet.of(Material.SAND, Material.GRAVEL, Material.ANVIL);
 		
-	public static final EnumSet<Material> duple = EnumSet.of(Material.BED_BLOCK, Material.WOODEN_DOOR, Material.IRON_DOOR_BLOCK, Material.PISTON_EXTENSION, Material.PISTON_STICKY_BASE, Material.PISTON_BASE);
+	public static final EnumSet<Material> duple = EnumSet.of(Material.DOUBLE_PLANT, Material.BED_BLOCK, Material.WOODEN_DOOR, Material.IRON_DOOR_BLOCK, Material.PISTON_EXTENSION, Material.PISTON_STICKY_BASE, Material.PISTON_BASE);
 	
 	/*  Additions to CompoundDependingBlock.java may have made these unnecessary:
 	public static BlockState[] getRestOfBed(final BlockState bs)

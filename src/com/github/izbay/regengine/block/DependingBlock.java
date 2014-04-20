@@ -45,7 +45,7 @@ public class DependingBlock {
 			this(d1.block, (d1.action == Action.DESTROY ? Action.DESTROY : 
 					(d2.action == Action.DESTROY ? Action.DESTROY : 
 						(d1.action == Action.RESTORE_AFTER_LOSS || d2.action == Action.RESTORE_AFTER_LOSS) ? Action.RESTORE_AFTER_LOSS : Action.RESTORE)) );
-			if(!d1.coord().equals(d2.coord()))  { throw new IllegalArgumentException(); }
+			if(!d1.coord().equals(d2.coord()))  { throw new IllegalArgumentException("Vector mismatch in DependingBlock() ctor."); }
 		}// ctor
 		
 		/**
@@ -57,8 +57,11 @@ public class DependingBlock {
 		public DependingBlock mergeWith(final DependingBlock d2)
 		{
 		//	if(!this.coord().equals(d2.coord()))  { throw new IllegalArgumentException(); }
-			return new DependingBlock(this, d2);
-		}
+			final DependingBlock dNew = new DependingBlock(this, d2);
+			// A 'hard' dependency for either input should give a hard on the output.
+			assert(!((this.action().isHardDependency() || d2.action().isHardDependency()) && !dNew.action().isHardDependency()));
+			return dNew;
+		}// mergeWith()
 		
 		/**
 		 * Mutator version of mergeWith().
@@ -143,7 +146,7 @@ public class DependingBlock {
 	public DependingBlockSet gravityBoundRevDependency()
 	{
 		if( BlockTypes.gravityBound.contains(block.getType()) )
-		{	return new DependingBlockSet(DependingBlock.from(block, Action.RESTORE)); }
+		{	return new DependingBlockSet(DependingBlock.from(Util.getBlockBelow(block), Action.RESTORE)); }
 		else return DependingBlockSet.emptySet(); 	
 	}// gravityBoundRevDependency()
 
@@ -153,6 +156,7 @@ public class DependingBlock {
 		if(BlockTypes.duple.contains(this.getType()))
 		{
 			assert( this instanceof CompoundDependingBlock );
+			if(!(this instanceof CompoundDependingBlock)) throw new IllegalArgumentException();
 			return ((CompoundDependingBlock)this).getEntire();
 		}// if
 		else
@@ -227,7 +231,8 @@ public class DependingBlock {
 		{
 			for(Block bAdj: Util.getEnclosingBlocks(Util.getBlockAt(b.block.getLocation())))
 			{
-				set.add(DependingBlock.from(bAdj, Action.RESTORE));
+				if(bAdj.getType() == Material.PORTAL || bAdj.getType() == Material.OBSIDIAN)
+				{	set.add(DependingBlock.from(bAdj, Action.RESTORE));	}// if
 			}// for
 		}// if
 		
@@ -261,7 +266,7 @@ public class DependingBlock {
 				{
 					final VineDependingBlock vb = (VineDependingBlock)(DependingBlock.from(bAdj, Action.RESTORE));
 
-					set.add(vb.difference(VineDependingBlock.subtrahendAdjacent(dir)));
+					set.add(vb.difference(VineDependingBlock.subtrahendAdjacent(dir.getOppositeFace())));
 				}// if
 			}// for
 		}// elif

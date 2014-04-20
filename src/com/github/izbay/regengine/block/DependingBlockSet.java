@@ -154,38 +154,57 @@ public class DependingBlockSet implements Iterable<DependingBlock>
 		
 		while(!sSearch.isEmpty())
 		{
+			// "Pop" the next block off the search "queue".
 			final Iterator<DependingBlock> it = sSearch.values().iterator();
 			final DependingBlock b = it.next();
 			it.remove();
 
 			final DependingBlockSet sD = b.allFwdDependencies();
 			assert(!sSearch.containsKey(b.coord()));
+			// We can't say this: assert(!sD.contains(b.coord())); // because the set returned by the compound-block check will contain its caller.
 			for(BlockVector v : sD.blocks.keySet())
 			{
 				final DependingBlock dDep = sD.blocks.get(v);
-				if(!sOut.blocks.containsKey(v))
+				// Because sOut keeps track of the "visited" blocks, if a block can't be found in sOut, it's a first-time encounter.  Therefore it certainly gets added now...
+				if(!sOut.contains(v))
 				{
 					sOut.add(dDep);
 					assert(!sSearch.containsKey(dDep.coord()));
+					// ... and it gets added to the search queue if it's a 'hard' dependency--i.e., it's guaranteed to be moved|destroyed and to propagate the dependency search along. 
 					if(dDep.action().isHardDependency())
 					{ sSearch.put(v, dDep); }
 				}// if
+				// Otherwise it has been encountered before--though the search may not have branched off its path yet.
 				else // sOut contains dDep
 				{
-					if(!sSearch.containsKey(v))
+/*					if(!sSearch.containsKey(v))
 					{	sSearch.put(v, dDep); }// if
 					else
 					{
 						assert(sSearch.get(v).equals(sOut.blocks.get(v)));
-						if(dDep.action().isHardDependency() 
-								&& !sSearch.get(v).action().isHardDependency())
-						{
-							sSearch.put(v, dDep);
-							sOut.blocks.put(v,dDep);
+
+					*/
+					// If the block is in the search queue already, we perhaps will need to _update_ that value.  We now compare the new with the value currently in the output set:
+                        final DependingBlock prevVal = sOut.blocks.get(v);
+						// This merge operation is polymorphic: in the basic case it only checks the values of the action() fields, overriding a soft with a hard.  But in the Vine case, for example, it also calculates whether there is enough "evidence" to _upgrade_ a vine from a soft to a hard dependency.
+						final DependingBlock newVal = prevVal.mergeWith(dDep);
+
+					// Now what do we do with that?  The values in sOut and also sSearch--if prevVal is also in the search queue--need to be updated.  However, if the block has already been searched, but there has been a qualitative change, it must go _back_ in the queue.  This is how we handle the complicated Vine relationships.
+					if(sSearch.containsKey(v))
+					{
+						// TODO: Assert that the sSearch and sOut objects are the same?
+						sSearch.put(v, newVal);
+					}// if
+					else if(newVal.action().isHardDependency() 
+								&& !prevVal.action().isHardDependency())
+					{
+							sSearch.put(v, newVal);
 							assert(sSearch.get(v).action().isHardDependency());
-							assert(sOut.blocks.get(v).action().isHardDependency());
-						}// if
-					}// else
+					}// elif 
+					
+					// Now, update sOut in either case: 
+                    sOut.blocks.put(v,newVal);
+					/*}// else*/
 				}// else
 				assert(sOut.blocks.containsKey(dDep.coord()));
 			}// for
@@ -200,8 +219,12 @@ public class DependingBlockSet implements Iterable<DependingBlock>
 		final DependingBlockSet sOut = new DependingBlockSet(sIn); 
 		final DependingBlockSet sSearch = new DependingBlockSet(sIn);
 		
+		int loop_counter = 0;
 		while(!sSearch.isEmpty())
 		{
+			++loop_counter;
+			if(loop_counter > 1000000000) throw new Error("Infinite loop detected in doRevDepsSearch().");
+			
 			final Iterator<DependingBlock> it = sSearch.blocks.values().iterator();
 			final DependingBlock b = it.next();
 			it.remove();
@@ -211,17 +234,20 @@ public class DependingBlockSet implements Iterable<DependingBlock>
 			//for(BlockVector vDep : sD.blocks.keySet())
 			{
 				//final DependingBlock dDep = sD.blocks.get(vDep);
-				assert(!entry.getValue().action().isHardDependency());
-				if(!sSearch.contains(entry.getKey()))
+				// We can't assert this: assert(!entry.getValue().action().isHardDependency()); // because the dupleBlockDependency() check will return both parts with Action.DESTROY if one of them has it.
+				if(!sOut.contains(entry.getKey()))
 				{
+					// TODO: Is it better to use add() here, which does a full merge check, or a plain put()?  Does it matter semantically or concerns it only efficiency?
 					sSearch.add(entry.getValue());
 					if(!sOut.contains(entry.getKey()))
 					{	sOut.add(entry.getValue());	}// if
 				}// if
+				/*
 				else
 				{	
 					assert(!sOut.contains(entry.getKey()));
 				}// else
+				*/
 			}// for
 		}// while
 

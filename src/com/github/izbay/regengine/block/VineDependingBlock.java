@@ -62,6 +62,7 @@ public class VineDependingBlock extends DependingBlock
 		}// for
 	}// ctor
 	
+	// Merge constructor.
 	public VineDependingBlock(final VineDependingBlock d1, final VineDependingBlock d2)
 	{	
 		super(d1,d2); // merges the 'action' fields
