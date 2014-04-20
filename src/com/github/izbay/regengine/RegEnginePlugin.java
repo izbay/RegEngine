@@ -1,7 +1,6 @@
 package com.github.izbay.regengine;
 
 import java.io.IOException;
-//import java.util.Collection;
 import java.util.HashMap;
 
 import org.bukkit.Effect;
@@ -9,21 +8,28 @@ import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.block.Block;
+import org.bukkit.block.BlockState;
+import org.bukkit.block.Chest;
 import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.inventory.InventoryHolder;
+import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.BlockVector;
 import org.bukkit.util.Vector;
 
+/*
 import clojure.lang.RT;
 import clojure.lang.Compiler;
+*/
 //import clojure.lang.Var;
 
 import com.github.izbay.util.*;
 
 public class RegEnginePlugin extends JavaPlugin 
 {
-		private HashMap<Location, Material> blockMap = new HashMap<Location,Material>();
+//		private HashMap<Location, Material> blockMap = new HashMap<Location,Material>();
+		private HashMap<Location, SerializedBlock> blockMap = new HashMap<Location,SerializedBlock>();
 		private HashMap<Location, Byte> dataMap = new HashMap<Location,Byte>();
 		private FileConfiguration config;
 		/**
@@ -63,7 +69,9 @@ public class RegEnginePlugin extends JavaPlugin
 		}// ctor
 		
 		@Override
-		public void onDisable() { }
+		public void onDisable() {
+			//TODO: Write out every map to file.
+		}
 
 		@Override
 		public void onEnable() {
@@ -111,7 +119,61 @@ public class RegEnginePlugin extends JavaPlugin
 				}
 			}// else
 		}// alter()
+			
+		public void alter(Plugin plugin, Location l, Material m){
+			Location normal = Util.normalizeLocation(l);
+			Material backup = normal.getBlock().getType();
+			if(backup != m){
+				if(!blockMap.containsKey(normal)){
+					blockMap.put(normal, new SerializedBlock(normal.getBlock()));
+					BlockState state = normal.getBlock().getState();
+					if(state instanceof Chest){
+						((Chest)state).getBlockInventory().clear();
+					} else if(state instanceof InventoryHolder){
+						((InventoryHolder)state).getInventory().clear();
+					}
+					normal.getBlock().setType(m);
+					regen(normal);	
+				}
+			}
+		}
 		
+		public void alter(Plugin plugin, final Vector v, final Material m)
+		{	alter(plugin, Util.getLocation(v), m); }
+		
+		public void alter(Plugin plugin, final Block b, final Material m)
+		{	alter(plugin, b.getLocation(), m); }
+		
+		private void regen(final Location l){
+			if(doParticles){
+				for(int i=0; i<60; i+=10){
+					this.getServer().getScheduler().scheduleSyncDelayedTask(this, new BukkitRunnable() {
+						public void run() {
+							l.getWorld().playEffect(l, Effect.MOBSPAWNER_FLAMES, 2004);
+						}
+					}, 200L-i);
+				}
+			}
+			
+			this.getServer().getScheduler().scheduleSyncDelayedTask(this, new Runnable() {
+				@SuppressWarnings("deprecation")
+				public void run() {
+					SerializedBlock restore = blockMap.get(l);
+					l.getBlock().setType(Material.getMaterial(restore.type));
+				    l.getBlock().setData(restore.data);
+				    if(restore.inventory.getInventory() != null){
+				    	BlockState state = l.getBlock().getState();
+				    	if(state instanceof Chest){
+				    		((Chest) state).getBlockInventory().setContents(restore.inventory.getInventory());
+				    	} else if(state instanceof InventoryHolder){
+				    		((InventoryHolder) state).getInventory().setContents(restore.inventory.getInventory());
+				    	}
+				    }
+				    blockMap.remove(l);
+				}
+			}, 200L);
+		}
+}
 		// Ad-hoc polymorphism.
 		public void alter(Location l){
 			alter(l, Material.AIR);
@@ -174,10 +236,19 @@ public class RegEnginePlugin extends JavaPlugin
 			this.getServer().getScheduler().scheduleSyncDelayedTask(this, new Runnable() {
 				@SuppressWarnings("deprecation")
 				public void run() {
-					l.getBlock().setType(blockMap.get(l));
-				    l.getBlock().setData(dataMap.get(l));
+					SerializedBlock restore = blockMap.get(l);
+					l.getBlock().setType(Material.getMaterial(restore.type));
+				    l.getBlock().setData(restore.data);
+				    if(restore.inventory.getInventory() != null){
+				    	BlockState state = l.getBlock().getState();
+				    	if(state instanceof Chest){
+				    		((Chest) state).getBlockInventory().setContents(restore.inventory.getInventory());
+				    	} else if(state instanceof InventoryHolder){
+				    		((InventoryHolder) state).getInventory().setContents(restore.inventory.getInventory());
+				    	}
+				    }
 				    blockMap.remove(l);
-				    dataMap.remove(l);
+		//		    dataMap.remove(l);
 				}
 			}, 200L);
 		}
