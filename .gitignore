@@ -2,4 +2,9 @@
 .project
 .classpath
 .gitignore~
+.gitignore.swp
 /src/com/github/izbay/regengine/bk
+/src/cljengine/*.bk*
+/src/cljengine/*~
+/src/cljengine/*.swp
+/lib
