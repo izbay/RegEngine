@@ -28,6 +28,7 @@ public class RegEnginePlugin extends JavaPlugin
 		private FileConfiguration config;
 		@SuppressWarnings("unused")
 		private EventObserver eventobs = null;
+		private static boolean active = true;
 		/**
 		 * Config-file keystrings, because I amuse myself idly by turning things like these into constants.
 		 * Might be better as an enum.  This kind of design pattern gets so wearisome.
@@ -67,6 +68,8 @@ public class RegEnginePlugin extends JavaPlugin
 		@Override
 		public void onDisable() {
 			//TODO: Write out every map to file.
+			active = false;
+			XMLFromFile.serializeBlocks(blockMap);
 		}
 
 		@Override
@@ -83,7 +86,7 @@ public class RegEnginePlugin extends JavaPlugin
 			}
 			doParticles = this.config.getBoolean(Config.DO_PARTICLES);
 			clojureRegen = this.config.getBoolean(Config.USE_CLOJURE_REGEN);
-			
+			active = true;
 			// Load Clojure REGENgine implementation:
 			if (clojureRegen)
 			{
@@ -120,6 +123,8 @@ public class RegEnginePlugin extends JavaPlugin
 		}// alter()
 */			
 		public void alter(Plugin plugin, Location l, Material m){
+			if(!active){return;}
+			
 			Location normal = Util.normalizeLocation(l);
 			Material backup = normal.getBlock().getType();
 			if(backup != m){
