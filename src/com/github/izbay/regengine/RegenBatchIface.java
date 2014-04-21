@@ -13,7 +13,7 @@ public interface RegenBatchIface
 	/**
 	 * @return the tick at which restoration should proceed
 	 */
-	public abstract int getRestorationTime();
+	public abstract long getRestorationTime();
 
 	/**
 	 * Dequeues restoration unit.

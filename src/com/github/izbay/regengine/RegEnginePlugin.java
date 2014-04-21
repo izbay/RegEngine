@@ -1,5 +1,7 @@
 package com.github.izbay.regengine;
 
+
+/*
 import java.util.HashMap;
 
 import org.bukkit.Effect;
@@ -7,11 +9,12 @@ import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.BlockState;
 import org.bukkit.block.Chest;
-import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.plugin.Plugin;
-import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
+*/
+import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.plugin.java.JavaPlugin;
 
 /*
 import clojure.lang.RT;
@@ -24,7 +27,7 @@ import com.github.izbay.util.*;
 public class RegEnginePlugin extends JavaPlugin 
 {
 //		private HashMap<Location, Material> blockMap = new HashMap<Location,Material>();
-		private HashMap<Location, SerializedBlock> blockMap = new HashMap<Location,SerializedBlock>();
+		//private HashMap<Location, SerializedBlock> blockMap = new HashMap<Location,SerializedBlock>();
 //		private HashMap<Location, Byte> dataMap = new HashMap<Location,Byte>();
 		private FileConfiguration config;
 		/**
@@ -117,24 +120,6 @@ public class RegEnginePlugin extends JavaPlugin
 			}// else
 		}// alter()
 */			
-		public void alter(Plugin plugin, Location l, Material m){
-			Location normal = Util.normalizeLocation(l);
-			Material backup = normal.getBlock().getType();
-			if(backup != m){
-				if(!blockMap.containsKey(normal)){
-					blockMap.put(normal, new SerializedBlock(normal.getBlock()));
-					BlockState state = normal.getBlock().getState();
-					if(state instanceof Chest){
-						((Chest)state).getBlockInventory().clear();
-					} else if(state instanceof InventoryHolder){
-						((InventoryHolder)state).getInventory().clear();
-					}
-					normal.getBlock().setType(m);
-					regen(normal);	
-				}
-			}
-		}
-		
 		/*
 		public void alter(Plugin plugin, final Vector v, final Material m)
 		{	alter(plugin, Util.getLocation(v), m); }
@@ -227,7 +212,31 @@ public class RegEnginePlugin extends JavaPlugin
 		
 		
 */
-		// The first prototype:
+
+		/*
+		public void alter(Plugin plugin, Location l, Material m)
+		{
+			Location normal = Util.normalizeLocation(l);
+			Material backup = normal.getBlock().getType();
+			if(backup != m){
+				if(!blockMap.containsKey(normal)){
+					blockMap.put(normal, new SerializedBlock(normal.getBlock()));
+					BlockState state = normal.getBlock().getState();
+					if(state instanceof Chest){
+						((Chest)state).getBlockInventory().clear();
+					} else if(state instanceof InventoryHolder){
+						((InventoryHolder)state).getInventory().clear();
+					}
+					normal.getBlock().setType(m);
+					regen(normal);	
+				}
+			}
+		}
+		*/
+		
+		
+		
+		/*
 		private void regen(final Location l){
 			if(doParticles){
 				for(int i=0; i<60; i+=10){
@@ -247,6 +256,7 @@ public class RegEnginePlugin extends JavaPlugin
 				}
 			}, 200L);
 		}
+		*/
 }// RegEnginePlugin
 
 
