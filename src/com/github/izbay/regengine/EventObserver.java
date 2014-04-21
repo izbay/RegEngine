@@ -13,7 +13,7 @@ public class EventObserver implements Listener{
 	    }
 	 
 	 @EventHandler
-	 public void onPhysics(BlockPhysicsEvent event) {
+	 private void onPhysics(BlockPhysicsEvent event) {
 		 event.setCancelled(physicsBool);
 	 	}
 	 
