@@ -99,6 +99,16 @@
 (defn alter-and-restore [bat]
   (.alterAndRestore bat))
 
+(do
+  (defmulti block-order class)
+  (defmethod block-order RegenBatch [bat]
+    (map (memfn getVector) (. bat blockOrder))))
+
+(do
+  (defmulti get-actions class)
+  (defmethod get-actions RegenBatch [bat]
+    (map (comp (memfn action) val) (.. bat blocks blocks) )))
+
 ;(load "dependencies")
 
 (defonce ^{:doc "Default number of ticks between backup & restoration." :dynamic true}
@@ -547,7 +557,7 @@ If :suppress-physics is set, we'll try to do just that...
       (assert* (isa? class-vec [BlockImage]) "Dammit, wrong type: %s, %s" images class-vec)
       (apply regenerate-region images rest))))
 
-(defn alter-and-restore [loc & options]
+#_(defn alter-and-restore [loc & options]
   "Single-block wrapper."
   ;(apply alter-and-restore-region loc loc rest)
   (apply batch-alter-and-restore [loc] options))

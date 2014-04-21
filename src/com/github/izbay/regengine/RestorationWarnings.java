@@ -4,13 +4,14 @@ import org.bukkit.Bukkit;
 import org.bukkit.Effect;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
+import org.bukkit.plugin.Plugin;
 import org.bukkit.scheduler.BukkitRunnable;
 
 public class RestorationWarnings {
 	
 	private long timer;
 	private Location location;
-	private RegEnginePlugin plugin;
+	private Plugin plugin;
 	
 	private BukkitRunnable br = new BukkitRunnable() {
 		@Override
@@ -45,7 +46,7 @@ public class RestorationWarnings {
 	}
 	
 	
-	public RestorationWarnings(long time, final Location l, RegEnginePlugin plugin) {
+	public RestorationWarnings(long time, final Location l, Plugin plugin) {
 		this.timer = time/2;
 		this.location = l;
 		this.plugin = plugin;

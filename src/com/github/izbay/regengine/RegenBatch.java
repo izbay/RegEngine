@@ -30,6 +30,7 @@ import org.bukkit.block.Chest;
 //import org.bukkit.entity.Player;
 import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.plugin.Plugin;
+import org.bukkit.util.BlockVector;
 import org.bukkit.util.Vector;
 //import java.util.Collection;
 
@@ -61,6 +62,7 @@ public class RegenBatch implements RegenBatchIface
 	public final DependingBlockSet blocks;
 	public final Material newMaterial;
 	public final Plugin plugin;
+	public Set<RestorationWarnings> warner = new LinkedHashSet<RestorationWarnings>();
 	//public Map<Location, SerializedBlock> blockMap;
 	protected Status status;
 	public final LinkedList<SerializedBlock> blockOrder = new LinkedList<SerializedBlock>();
@@ -200,6 +202,10 @@ public class RegenBatch implements RegenBatchIface
 	}
 	 */
 
+	/**
+	 * Wrapper that activates ('alters') and immediately schedules restoration of blocks.
+	 * @return
+	 */
 	public RegenBatch alterAndRestore()
 	{
 		batchAlter();
@@ -237,8 +243,12 @@ public class RegenBatch implements RegenBatchIface
 
 			// Removal loop:
 			//		for(Map.Entry<Location,SerializedBlock> entry : this.blockMap.entrySet())
-			for(SerializedBlock sb : this.blockOrder)
+			for(Iterator<SerializedBlock> i = this.blockOrder.descendingIterator(); i.hasNext(); )
+				//		for(Map.Entry<Location,SerializedBlock> entry : blockMap.entrySet())
 			{
+				final SerializedBlock sb = i.next();
+//			for(SerializedBlock sb : this.blockOrder)
+//			{
 				final Block block = Util.getBlockAt(sb.getVector(),this.world);
 				final BlockState state = block.getState();
 				if(state instanceof Chest){
@@ -281,7 +291,7 @@ public class RegenBatch implements RegenBatchIface
 			disablePhysics();
 			// TODO: Multiple loops, if necessary, to ensure proper replacement.
 			// TODO: Pop-to-item the blocks being replaced.
-			for(Iterator<SerializedBlock> i = this.blockOrder.descendingIterator(); i.hasNext(); )
+			for(Iterator<SerializedBlock> i = this.blockOrder.iterator(); i.hasNext(); )
 				//		for(Map.Entry<Location,SerializedBlock> entry : blockMap.entrySet())
 			{
 				final SerializedBlock block = i.next();
@@ -312,13 +322,21 @@ public class RegenBatch implements RegenBatchIface
 			}// run()
 		}, this.delay);
 
-		// TODO: Load warner
-		//new RestorationWarnings
+		// Enable warnings if applicable:
+		if(RegEnginePlugin.getInstance().doParticles)// TODO: Do we want to switch off all warnings if only 'doParticles' is false?
+		{
+			for(BlockVector v : this.blocks.blocks.keySet())
+			{
+				final RestorationWarnings w = new RestorationWarnings(this.delay, Util.getLocation(v, world), this.plugin);
+				w.start();
+				warner.add(w);
+			}// for
+		}// if
 
 		this.status = Status.PENDING_RESTORATION;
-		assert(this.isRunning());
+					assert(this.isRunning());
 
-		return this;
+					return this;
 	}// queueBatchRestoration()		
 
 }// RegenBatch

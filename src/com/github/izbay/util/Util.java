@@ -86,8 +86,8 @@ public abstract class Util
 		public static Block getBlockAt(final Vector v, final World world)
 		{	return world.getBlockAt( v.getBlockX(), v.getBlockY(), v.getBlockZ()); }
 		
-		public static Location getLocation(final Vector v)
-		{ 	return v.toLocation(getCurrentWorld()); }
+		public static Location getLocation(final Vector v, final World w)
+		{ 	return v.toLocation(w); }
 
 		public static Location getLocation(final Block b)
 		{ 	return b.getLocation(); }
