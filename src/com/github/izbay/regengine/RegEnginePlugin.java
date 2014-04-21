@@ -238,7 +238,14 @@ public class RegEnginePlugin extends JavaPlugin
 		
 		/*
 		private void regen(final Location l){
-			if(doParticles){
+			
+			
+			if(doParticles && !blockMap.containsKey(1)){
+				
+				RestorationWarnings w = new RestorationWarnings(200L, l, this);
+				w.start();
+				
+				/*
 				for(int i=0; i<60; i+=10){
 					this.getServer().getScheduler().scheduleSyncDelayedTask(this, new BukkitRunnable() {
 						public void run() {
@@ -246,6 +253,7 @@ public class RegEnginePlugin extends JavaPlugin
 						}
 					}, 200L-i);
 				}
+				*/
 			}
 			
 			this.getServer().getScheduler().scheduleSyncDelayedTask(this, new Runnable() {
