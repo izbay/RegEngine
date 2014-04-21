@@ -1,5 +1,12 @@
 ; -*- eval: (clojure-mode); eval: (paredit-mode); eval: (viper-mode); eval: (cider '127.0.0.1 4005) -*-
 
+(comment " Try running the following in Emacs Lisp to get the REPL going: "
+         (progn
+          (if (not (cider-connected-p)) (cider "127.0.0.1" 4005)
+              (cider-interactive-eval-to-repl "(in-ns 'cljengine.regen)")
+              (cider-switch-to-current-repl-buffer)
+              (paredit-mode))))
+
 (ns cljengine.regen
   "Testing Clojure in Minecraft."
   (:refer-clojure :exclude [map])
@@ -74,6 +81,17 @@
 
                                         ;(declare physics-blocking-handler, player-move-event-handler)
 
+
+(do
+  (defmulti regen-batch-destroying (fn [blocks? & _]
+                                     (if (coll? blocks?) [(class (first blocks?))]
+                                         (class blocks?))))
+  (defmethod regen-batch-destroying :cljengine.mc/block-state-image [block delay]
+    (regen-batch-destroying [block] delay))
+  (defmethod regen-batch-destroying [:cljengine.mc/block-state-image] [blocks delay]
+    (RegenBatch/destroying *plugin* (map get-block-vector blocks) (get-current-world) delay))
+  (defmethod regen-batch-destroying [Vector] [block-vecs delay]
+    (RegenBatch/destroying *plugin* block-vecs (get-current-world) delay)) )
 
 ;(load "dependencies")
 

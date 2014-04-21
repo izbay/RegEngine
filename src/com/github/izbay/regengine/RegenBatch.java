@@ -6,8 +6,11 @@ package com.github.izbay.regengine;
 //import java.util.ArrayDeque;
 import java.util.Collections;
 //import java.util.Deque;
-import java.util.HashSet;
+//import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.Map;
 //import java.util.LinkedHashMap;
 import java.util.LinkedList;
 //import java.util.List;
@@ -50,17 +53,23 @@ import com.github.izbay.util.Util;
 
 public class RegenBatch implements RegenBatchIface 
 {
+	public static enum Status { UNUSED, ALTERED, PENDING_RESTORATION, DONE, CANCELLED };
+
 	protected final World world;
 	protected final long delay;
 	public final DependingBlockSet blocks;
 	public final Material newMaterial;
 	public final Plugin plugin;
 	//public Map<Location, SerializedBlock> blockMap;
+	protected Status status;
 	public final LinkedList<SerializedBlock> blockOrder = new LinkedList<SerializedBlock>();
 
-	public static Set<RegenBatch> activeBatches = new HashSet<RegenBatch>();
+	protected static Map<World,LinkedHashSet<RegenBatch>> activeBatches = new LinkedHashMap<World,LinkedHashSet<RegenBatch>>();
 
 	//	private BlockImage[] blocks; // Comment this out until I'm ready to use it
+	
+	public static Map<World,LinkedHashSet<RegenBatch>> activeBatches() { return activeBatches; }
+	public static Set<RegenBatch> activeBatches(final World world) { return activeBatches.get(world); }
 
 	/* (non-Javadoc)
 	 * @see com.github.izbay.regengine.RegenBatchIface#getWorld()
@@ -71,6 +80,19 @@ public class RegenBatch implements RegenBatchIface
 	@Override
 	public long delay() { return delay; }
 
+	public Status status() 
+	{ 
+		assert(activeBatches.containsKey(world));
+		assert(status == Status.DONE || activeBatches.get(world).contains(this));
+		return this.status; 
+	}// status()
+
+	public boolean isRunning() { return status == Status.PENDING_RESTORATION; }
+	
+	public boolean isActive() { return status != Status.DONE && status != Status.CANCELLED; }
+	
+	public boolean isDone() { return status == Status.DONE; }
+	
 	/* (non-Javadoc)
 	 * @see com.github.izbay.regengine.RegenBatchIface#getRestorationTime()
 	 */
@@ -95,7 +117,12 @@ public class RegenBatch implements RegenBatchIface
 	public RegenBatch(final Plugin plugin, final Iterable<Vector> blockVectors, final World world, final long delay) {
 		super();
 
-		RegenBatch.activeBatches.add(this);
+		if(!RegenBatch.activeBatches.containsKey(world)) RegenBatch.activeBatches.put(world, new LinkedHashSet<RegenBatch>());
+		assert(RegenBatch.activeBatches.containsKey(world));
+
+		assert(!RegenBatch.activeBatches.get(world).contains(this));
+		RegenBatch.activeBatches.get(world).add(this);
+		assert(!RegenBatch.activeBatches.get(world).contains(this));
 
 		//		this.blocks = blocks;
 		this.plugin = plugin;
@@ -111,6 +138,7 @@ public class RegenBatch implements RegenBatchIface
 		}// for
 
 		this.blocks = sIn.doFullDependencySearch();
+		this.status = Status.UNUSED;
 	}// ctor
 
 
@@ -121,7 +149,24 @@ public class RegenBatch implements RegenBatchIface
 	@Override
 	public void cancel()
 	{
-		// TODO
+		switch(this.status)
+		{
+		case UNUSED:
+		case ALTERED:
+			this.status = Status.CANCELLED;
+			RegenBatch.removeFromActiveSet(this);
+			break;
+		case PENDING_RESTORATION:
+                throw new Error("Cancelling mid-regeneration not yet implemented!");
+		case DONE:
+		case CANCELLED:
+			assert(!this.isActive());
+			assert(!this.isRunning());
+			assert(!activeBatches.get(world).contains(this));
+			break;
+		default:
+			throw new Error("Fell through RegenBatch.cancel(); shouldn't happen.");
+		}// switch
 	}// cancel
 
 	/*	public DependingBlockSet doFwdDependencies()
@@ -150,16 +195,24 @@ public class RegenBatch implements RegenBatchIface
 	}
 	 */
 
-
-	public void alterAndRestore()
+	public RegenBatch alterAndRestore()
 	{
 		batchAlter();
+		assert(status == Status.ALTERED);
 		queueBatchRestoration();
+		assert(this.isRunning());
+		return this;
 	}// destroyAndRestore()
 
-	public void batchAlter()
+	/**
+	 * Does *not* queue for regeneration.  To cause that as well, use .alterAndRestore().
+	 * @return
+	 */
+	public RegenBatch batchAlter()
 	{
-		if(!blocks.isEmpty())
+		if (status != Status.UNUSED)
+		{	throw new Error("Called RegenBatch.batchAlter() on an already-altered Batch.  (I think.)"); }// if
+		else if(!blocks.isEmpty())
 		{
 			//this.blockMap = new LinkedHashMap<Location,SerializedBlock>();
 			//this.blockOrder = new ArrayDeque<SerializedBlock>();
@@ -195,11 +248,23 @@ public class RegenBatch implements RegenBatchIface
 			}// for
 
 		}// if
+		
+		status = Status.ALTERED;
+		return this;
 	}// batchAlter()
 
-
-	private void restore()
+	public static void removeFromActiveSet(final RegenBatch batch)
 	{
+		assert(activeBatches.containsKey(batch.world));
+		assert(activeBatches.get(batch.world).contains(batch));
+		activeBatches.get(batch.world).remove(batch);
+		assert(!activeBatches.get(batch.world).contains(batch));
+	}// removeFromActiveSet()
+
+	protected RegenBatch restore()
+	{
+		if(status != Status.PENDING_RESTORATION) throw new Error("Can only call RegenBatch.restore() on a batch 'PENDING_RESTORATION'.");
+
 		// TODO: Multiple loops, if necessary, to ensure proper replacement.
 		// TODO: Pop-to-item the blocks being replaced.
 		for(Iterator<SerializedBlock> i = this.blockOrder.descendingIterator(); i.hasNext(); )
@@ -212,17 +277,32 @@ public class RegenBatch implements RegenBatchIface
 			//		    dataMap.remove(l);
 		}// for
 
-		assert(RegenBatch.activeBatches.contains(this));
-		RegenBatch.activeBatches.remove(this);
+		// Mark the batch as 'done', including removing it from the global map:
+		this.status = Status.DONE;
+		RegenBatch.removeFromActiveSet(this);
+		
+		return this;
 	}// restore()
 
-	public void queueBatchRestoration()
+	public RegenBatch queueBatchRestoration()
 	{
+		if(status != Status.ALTERED)
+		{	throw new Error("Can only call RegenBatch.queueBatchRestoration() with an 'ALTERED' status.  Did you run .batchAlter() first?"); }// if
+
 		plugin.getServer().getScheduler().scheduleSyncDelayedTask(plugin, new Runnable() {
 			public void run() 
 			{
 				restore();
 			}// run()
 		}, this.delay);
+		
+		// TODO: Load warner
+		//new RestorationWarnings
+		
+		this.status = Status.PENDING_RESTORATION;
+		assert(this.isRunning());
+		
+		return this;
 	}// queueBatchRestoration()		
+	
 }// RegenBatch
