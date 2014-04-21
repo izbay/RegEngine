@@ -25,6 +25,7 @@ public class RegEnginePlugin extends JavaPlugin
 		private HashMap<Location, SerializedBlock> blockMap = new HashMap<Location,SerializedBlock>();
 //		private HashMap<Location, Byte> dataMap = new HashMap<Location,Byte>();
 		private FileConfiguration config;
+		private EventObserver eventobs = null;
 		/**
 		 * Config-file keystrings, because I amuse myself idly by turning things like these into constants.
 		 * Might be better as an enum.  This kind of design pattern gets so wearisome.
@@ -71,6 +72,7 @@ public class RegEnginePlugin extends JavaPlugin
 			// Load config
 			this.saveDefaultConfig();
 			config = this.getConfig();
+			eventobs = new EventObserver(this);
 			
 			// If configured to do so, check the latest version on BukkitDEV and
 			// alert if user is out of date.
@@ -120,6 +122,10 @@ public class RegEnginePlugin extends JavaPlugin
 			Material backup = normal.getBlock().getType();
 			if(backup != m){
 				if(!blockMap.containsKey(normal)){
+					
+					// turns physics off
+					eventobs.setPhysics(false);
+					
 					blockMap.put(normal, new SerializedBlock(normal.getBlock()));
 					BlockState state = normal.getBlock().getState();
 					if(state instanceof Chest){
