@@ -22,7 +22,7 @@ import clojure.lang.Compiler;
 */
 //import clojure.lang.Var;
 
-import com.github.izbay.util.*;
+//import com.github.izbay.util.*;
 
 public class RegEnginePlugin extends JavaPlugin 
 {
@@ -72,7 +72,8 @@ public class RegEnginePlugin extends JavaPlugin
 		}
 
 		@Override
-		public void onEnable() {
+		public void onEnable() 
+		{
 			// Load config
 			this.saveDefaultConfig();
 			config = this.getConfig();
@@ -85,10 +86,10 @@ public class RegEnginePlugin extends JavaPlugin
 			doParticles = this.config.getBoolean(Config.DO_PARTICLES);
 			clojureRegen = this.config.getBoolean(Config.USE_CLOJURE_REGEN);
 			
+				/*
 			// Load Clojure REGENgine implementation:
 			if (clojureRegen)
 			{
-				/*
 				try {
 					RT.loadResourceScript("cljengine/regen.clj");
 					RT.var("cljengine.mc", "*debug-print*", true);// Set to false to make (debug-print) can it
@@ -98,8 +99,8 @@ public class RegEnginePlugin extends JavaPlugin
 					// TODO Auto-generated catch block
 					e1.printStackTrace();
 				}
-				*/
 			}// if
+				*/
 		}// onEnable()
 		
 		
@@ -253,7 +254,6 @@ public class RegEnginePlugin extends JavaPlugin
 						}
 					}, 200L-i);
 				}
-				*/
 			}
 			
 			this.getServer().getScheduler().scheduleSyncDelayedTask(this, new Runnable() {

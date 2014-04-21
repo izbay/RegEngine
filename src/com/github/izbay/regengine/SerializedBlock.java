@@ -1,5 +1,6 @@
 package com.github.izbay.regengine;
 
+import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
@@ -8,6 +9,7 @@ import org.bukkit.block.Chest;
 import org.bukkit.block.Sign;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryHolder;
+import org.bukkit.util.BlockVector;
 import org.bukkit.util.Vector;
 
 import com.github.izbay.util.Util;
@@ -17,7 +19,7 @@ public class SerializedBlock implements Comparable<SerializedBlock> {
 	private final int x, y, z;
 	@SuppressWarnings("unused")
 	private final long date;
-	@SuppressWarnings("unused")
+	//@SuppressWarnings("unused")
 	private final String type, world;
 	private final byte data;
 	private final String[] signtext;
@@ -59,7 +61,10 @@ public class SerializedBlock implements Comparable<SerializedBlock> {
 	    	}
 	    }
 		
-	}
+	}// place()
+	
+	public void place()
+	{	place(new Location(Bukkit.getWorld(this.world),x,y,z)); }// place()
 
 	@Override
 	public int compareTo(SerializedBlock other) {
@@ -77,4 +82,7 @@ public class SerializedBlock implements Comparable<SerializedBlock> {
 	private int getZ() {
 		return z;
 	}
+	
+	public BlockVector getVector()
+	{	return new BlockVector(x,y,z); }
 }

@@ -5,10 +5,10 @@
 
 (comment " Try running the following in Emacs Lisp to get the REPL going: "
          (progn
-           (cider "127.0.0.1" 4005)
-           (cider-interactive-eval-to-repl "(in-ns 'cljengine.block)")
-           (cider-switch-to-current-repl-buffer)
-           (paredit-mode)))
+          (if (not (cider-connected-p)) (cider "127.0.0.1" 4005)
+              (cider-interactive-eval-to-repl "(in-ns 'cljengine.block)")
+              (cider-switch-to-current-repl-buffer)
+              (paredit-mode))))
 
 
 

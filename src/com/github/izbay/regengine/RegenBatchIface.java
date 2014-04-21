@@ -8,7 +8,9 @@ public interface RegenBatchIface
 	/**
 	 * @return the world in which this restoration unit operates
 	 */
-	public abstract World getWorld();
+	public abstract World world();
+	
+	public abstract long delay();
 
 	/**
 	 * @return the tick at which restoration should proceed

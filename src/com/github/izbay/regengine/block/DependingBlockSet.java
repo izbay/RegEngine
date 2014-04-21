@@ -80,6 +80,9 @@ public class DependingBlockSet implements Iterable<DependingBlock>
 	public static DependingBlockSet emptySet()
 	{	return new DependingBlockSet(); }
 	
+	public DependingBlock get(final BlockVector key)
+	{	return blocks.get(key); }
+	
 	/**
 	 * Warning: Mutator!
 	 * @param b

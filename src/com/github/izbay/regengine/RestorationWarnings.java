@@ -1,8 +1,8 @@
 package com.github.izbay.regengine;
 
 
-import java.util.ArrayList;
-import java.util.List;
+//import java.util.ArrayList;
+//import java.util.List;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Effect;

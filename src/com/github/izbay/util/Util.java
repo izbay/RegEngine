@@ -12,6 +12,7 @@ import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.BlockState;
+import org.bukkit.entity.Player;
 import org.bukkit.material.Attachable;
 import org.bukkit.util.BlockVector;
 import org.bukkit.util.Vector;
@@ -98,7 +99,8 @@ public abstract class Util
 		public static Location normalizeLocation(final Location l)
 		{	return new Location(l.getWorld(), Math.round(l.getX()), Math.round(l.getY()), Math.round(l.getZ()));}
 			
-		
+		public static BlockVector getBlockVector(final Player pc)
+		{	return Util.getBlockVector(pc.getLocation()); }
 		/**
 		 * Non-mutating Vector addition.
 		 * @return 
@@ -183,6 +185,17 @@ public abstract class Util
 			else
 			{	return null; }
 		}// getAttachedFace
+
+	/*(defn get-player-space [^Player pc]
+  "Returns a Vector duple giving the positions of a player's lower and upper coords.  TODO: Make both BlockVectors."
+  (let [pc-pos (get-block-vector pc)]
+    [pc-pos (get-block-vector (add pc-pos 0 1 0))]))*/	
+		
+		public static BlockVector[] getPlayerSpace(final Player pc)
+		{
+			final BlockVector bLow = Util.getBlockVector(pc); 
+			return new BlockVector[] { bLow, Util.add(bLow, BlockFace.UP) };
+		}// getPlayerSpace()
 
 		private Util() {}
 }// Util
