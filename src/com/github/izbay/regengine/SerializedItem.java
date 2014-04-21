@@ -95,4 +95,39 @@ public class SerializedItem {
         item.setItemMeta(meta);
         return item;
     }
+	
+	public String getType(){
+		return type.name();
+	}
+	public String getAmount(){
+		return ((Integer)amount).toString();
+	}
+	public String getDurability(){
+		return ((Short)durability).toString();
+	}
+	public String[] getLore(){
+		return lore;
+	}
+	public String isBook(){
+		return ((Boolean)isBook).toString();
+	}
+	public String getName(){
+		return name;
+	}
+	public String getAuthor(){
+		return author;
+	}
+	public String getTitle(){
+		return title;
+	}
+	public String[] getPages(){
+		return pages;
+	}
+	public String[] getEnchants(){
+		return enchant;
+	}
+	public String[] getEnchantLevels(){
+		return Arrays.copyOf(enchantLevels, enchantLevels.length, String[].class);
+	}
+	
 }//end SerializedItem CLASS

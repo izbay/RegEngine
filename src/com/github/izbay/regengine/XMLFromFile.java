@@ -13,6 +13,7 @@ import org.w3c.dom.Document;
 import org.w3c.dom.NodeList;
 import org.w3c.dom.Node;
 import org.w3c.dom.Element;
+import org.w3c.dom.Text;
 
 import java.io.File;
 import java.util.Map;
@@ -91,87 +92,140 @@ public class XMLFromFile {
 			e.printStackTrace();
 		}
 	}
-
-	public static void serializeBlocks (Map<Location, SerializedBlock> map){
-		if(map.isEmpty()){return;}
-		int i=0;
-		for(SerializedBlock sb: map.values()){
-			BlockToFile(sb, i++);
-		}
+	
+	private static Text checkAndCreate(Document doc, String arg){
+		//if(arg == null){
+		//	arg = "";
+		//}
+		return doc.createTextNode(arg);
 	}
 	
-	private static void BlockToFile(SerializedBlock block, int blockNum) {
+	public static void BlocksToFile(Map<Location, SerializedBlock> map) {
+		if(map.isEmpty()){return;}
 		try {
 			DocumentBuilderFactory docFactory = DocumentBuilderFactory
 					.newInstance();
-			DocumentBuilder docBuilder = docFactory.newDocumentBuilder();
-
-			// root elements
+			DocumentBuilder docBuilder = docFactory.newDocumentBuilder();	
 			Document doc = docBuilder.newDocument();
-			Element rootElement = doc.createElement("Block");
+			Element rootElement = doc.createElement("BlockList");
 			doc.appendChild(rootElement);
+			
+			int i=0;
+			for(SerializedBlock sb: map.values()){
+				SerializedBlock block = sb;
+				
+				// root elements
+				Element thisBlock = doc.createElement("Block");
+				rootElement.appendChild(thisBlock);
 
-			// set attribute to block number
-			Attr attr = doc.createAttribute("Number");
-			attr.setValue(Integer.toString(blockNum));
+				// set attribute to block number
+				Attr attr = doc.createAttribute("Number");
+				attr.setValue(Integer.toString(i++));
 
+				thisBlock.setAttributeNode(attr);
 
-			rootElement.setAttributeNode(attr);
+				// Block elements
+				Element BlockType = doc.createElement("BlockType");
+				BlockType.appendChild(doc.createTextNode(block.getBlockType()));
+				thisBlock.appendChild(BlockType);
 
-			// shorten way
-			// staff.setAttribute("id", "1");
+				// Date elements
+				Element Date = doc.createElement("Date");
+				Date.appendChild(doc.createTextNode(block.getBlockDate()));
+				thisBlock.appendChild(Date);
 
-			// Block elements
-			Element BlockType = doc.createElement("BlockType");
-			BlockType.appendChild(doc.createTextNode(block.getBlockType()));
-			rootElement.appendChild(BlockType);
+				// World elements
+				Element World = doc.createElement("World");
+				World.appendChild(doc.createTextNode(block.getBlockWorld()));
+				thisBlock.appendChild(World);
 
-			// Date elements
-			Element Date = doc.createElement("Date");
-			Date.appendChild(doc.createTextNode(block.getBlockDate()));
-			rootElement.appendChild(Date);
+				// Data elements
+				Element Data = doc.createElement("Data");
+				Data.appendChild(doc.createTextNode(block.getBlockData()));
+				thisBlock.appendChild(Data);
 
-			// World elements
-			Element World = doc.createElement("World");
-			World.appendChild(doc.createTextNode(block.getBlockWorld()));
-			rootElement.appendChild(World);
-
-			// Data elements
-			Element Data = doc.createElement("Data");
-			Data.appendChild(doc.createTextNode(block.getBlockData()));
-			rootElement.appendChild(Data);
-
-			// SignText
-			Element SignText = doc.createElement("SignText");
-			String[] signtext = block.getBlockSignText();
-			if(signtext != null){
-				for(String s : signtext){
-					SignText.appendChild(doc.createTextNode(s));
+				// SignText
+				Element SignText = doc.createElement("SignText");
+				String[] signtext = block.getBlockSignText();
+				if(signtext != null){
+					for(String s : signtext){
+						SignText.appendChild(doc.createTextNode(s));
+					}
 				}
+				thisBlock.appendChild(SignText);
+
+				// ChestnSuch
+				Element ChestInventory = doc.createElement("ChestInventory");
+				if(block.getBlockChestInventory() != null){
+					int j=0;
+					for(SerializedItem item: block.getBlockChestInventory().getSerializedInventory()){
+						if(item == null){
+							j++;
+							continue;
+						}
+						Element thisItem = doc.createElement("Item");
+						
+						// set attribute to item number
+						Attr itemattr = doc.createAttribute("Number");
+						itemattr.setValue(Integer.toString(j++));
+						thisItem.setAttributeNode(itemattr);
+						
+						Element Name = doc.createElement("Name");
+						Name.appendChild(checkAndCreate(doc, item.getName()));
+						thisItem.appendChild(Name);
+						
+						Element Amount = doc.createElement("Amount");
+						Amount.appendChild(checkAndCreate(doc, item.getAmount()));
+						thisItem.appendChild(Amount);
+						
+						Element Durability = doc.createElement("Durability");
+						Durability.appendChild(checkAndCreate(doc, item.getDurability()));
+						thisItem.appendChild(Durability);
+						
+						/*Insert all the item fields here.
+						public String[] getLore(){
+							return lore;
+						}
+						public boolean isBook(){
+							return isBook;
+						}
+						public String getName(){
+							return name;
+						}
+						public String getAuthor(){
+							return author;
+						}
+						public String getTitle(){
+							return title;
+						}
+						public String[] getPages(){
+							return pages;
+						}
+						public String[] getEnchants(){
+							return enchant;
+						}
+						public Integer[] getEnchantLevels(){
+							return enchantLevels;
+						}*/
+					}
+				}
+				thisBlock.appendChild(ChestInventory);
+				
+				// XLoc
+				Element xLoc = doc.createElement("xLoc");
+				xLoc.appendChild(doc.createTextNode(block.getBlockXLoc()));
+				thisBlock.appendChild(xLoc);
+
+				// YLoc
+				Element yLoc = doc.createElement("yLoc");
+				yLoc.appendChild(doc.createTextNode(block.getBlockYLoc()));
+				thisBlock.appendChild(yLoc);
+
+				// YLoc
+				Element zLoc = doc.createElement("zLoc");
+				zLoc.appendChild(doc.createTextNode(block.getBlockZLoc()));
+				thisBlock.appendChild(zLoc);
 			}
-			rootElement.appendChild(SignText);
-
-			// ChestnSuch
-			Element ChestInventory = doc.createElement("ChestInventory");
-			ChestInventory.appendChild(doc.createTextNode(block
-					.getBlockChestInventory()));
-			rootElement.appendChild(ChestInventory);
-
-			// XLoc
-			Element xLoc = doc.createElement("xLoc");
-			xLoc.appendChild(doc.createTextNode(block.getBlockXLoc()));
-			rootElement.appendChild(xLoc);
-
-			// YLoc
-			Element yLoc = doc.createElement("yLoc");
-			yLoc.appendChild(doc.createTextNode(block.getBlockYLoc()));
-			rootElement.appendChild(yLoc);
-
-			// YLoc
-			Element zLoc = doc.createElement("zLoc");
-			zLoc.appendChild(doc.createTextNode(block.getBlockZLoc()));
-			rootElement.appendChild(zLoc);
-
 			// write the content into xml file
 			TransformerFactory transformerFactory = TransformerFactory
 					.newInstance();
@@ -180,6 +234,7 @@ public class XMLFromFile {
 			StreamResult result = new StreamResult(new File(RegEnginePlugin.getInstance().getDataFolder() + File.separator + "blocks.txt"));
 
 			transformer.transform(source, result);
+			
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
