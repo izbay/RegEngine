@@ -17,7 +17,9 @@ import com.github.izbay.util.Util;
 public class SerializedBlock implements Comparable<SerializedBlock> {
 		
 	private final int x, y, z;
+	@SuppressWarnings("unused")
 	private final long date;
+	//@SuppressWarnings("unused")
 	private final String type, world;
 	private final byte data;
 	private final String[] signtext;
@@ -83,50 +85,4 @@ public class SerializedBlock implements Comparable<SerializedBlock> {
 	
 	public BlockVector getVector()
 	{	return new BlockVector(x,y,z); }
-
-	public String getBlockDate()
-	{
-	   String s = Long.toHexString(date);
-	   return s;
-	}
-	
-	public String getBlockType()
-	{
-	   return type;
-	}
-	
-	public String getBlockWorld()
-	{
-	   return world;
-	}
-	
-	public String getBlockData()
-	{
-        return Byte.toString(data);
-	}
-	
-	public String[] getBlockSignText()
-	{
-	   return signtext;
-	}
-	
-	public String getBlockChestInventory()
-	{
-	   return "";
-	}
-	public String getBlockXLoc()
-	{
-	    return Integer.toString(x);
-	}
-	
-	public String getBlockYLoc()
-	{
-	    return Integer.toString(y);
-	}
-	
-	public String getBlockZLoc()
-	{
-	    return Integer.toString(z);
-	}
-}// SerializedBlock
-
+}

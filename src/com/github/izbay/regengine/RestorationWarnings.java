@@ -1,9 +1,5 @@
 package com.github.izbay.regengine;
 
-
-//import java.util.ArrayList;
-//import java.util.List;
-
 import org.bukkit.Bukkit;
 import org.bukkit.Effect;
 import org.bukkit.Location;
@@ -30,16 +26,15 @@ public class RestorationWarnings {
 	{
 		if(time < 10 )
 		{
-			System.out.println("RESTORED!");
+			//System.out.println("RESTORED!");
 			return;
 		}
-		System.out.println("inside" + timer);
+		//System.out.println("inside" + timer);
 		
 		
 		//List<Player> list = new ArrayList<Player>();
-		 
 		for (Player p : Bukkit.getOnlinePlayers()) {
-			if (p.getLocation().distance(l) < 2) {
+			if (p.getLocation().distance(l) < 1) {
 				//list.add(p);
 				p.sendMessage("Warning! Block Restoration in " + (time*2)/20 + " seconds!");
 			}

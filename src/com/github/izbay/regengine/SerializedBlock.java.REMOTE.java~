@@ -1,6 +1,5 @@
 package com.github.izbay.regengine;
 
-import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
@@ -9,7 +8,6 @@ import org.bukkit.block.Chest;
 import org.bukkit.block.Sign;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryHolder;
-import org.bukkit.util.BlockVector;
 import org.bukkit.util.Vector;
 
 import com.github.izbay.util.Util;
@@ -128,5 +126,4 @@ public class SerializedBlock implements Comparable<SerializedBlock> {
 	{
 	    return Integer.toString(z);
 	}
-}// SerializedBlock
-
+}
