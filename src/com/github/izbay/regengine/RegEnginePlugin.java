@@ -124,7 +124,7 @@ public class RegEnginePlugin extends JavaPlugin
 				if(!blockMap.containsKey(normal)){
 					
 					// turns physics off
-					eventobs.setPhysics(false);
+					//eventobs.setPhysics(false);
 					
 					blockMap.put(normal, new SerializedBlock(normal.getBlock()));
 					BlockState state = normal.getBlock().getState();
