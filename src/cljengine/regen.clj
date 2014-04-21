@@ -93,6 +93,12 @@
   (defmethod regen-batch-destroying [Vector] [block-vecs delay]
     (RegenBatch/destroying *plugin* block-vecs (get-current-world) delay)) )
 
+(defn queue-batch-restoration [bat]
+  (.queueBatchRestoration bat))
+
+(defn alter-and-restore [bat]
+  (.alterAndRestore bat))
+
 ;(load "dependencies")
 
 (defonce ^{:doc "Default number of ticks between backup & restoration." :dynamic true}

@@ -5,6 +5,7 @@ package com.github.izbay.regengine;
 
 //import java.util.ArrayDeque;
 import java.util.Collections;
+import java.util.Arrays;
 //import java.util.Deque;
 //import java.util.HashSet;
 import java.util.Iterator;
@@ -67,7 +68,7 @@ public class RegenBatch implements RegenBatchIface
 	protected static Map<World,LinkedHashSet<RegenBatch>> activeBatches = new LinkedHashMap<World,LinkedHashSet<RegenBatch>>();
 
 	//	private BlockImage[] blocks; // Comment this out until I'm ready to use it
-	
+
 	public static Map<World,LinkedHashSet<RegenBatch>> activeBatches() { return activeBatches; }
 	public static Set<RegenBatch> activeBatches(final World world) { return activeBatches.get(world); }
 
@@ -76,7 +77,7 @@ public class RegenBatch implements RegenBatchIface
 	 */
 	@Override
 	public World world() { return world; }
-	
+
 	@Override
 	public long delay() { return delay; }
 
@@ -88,11 +89,11 @@ public class RegenBatch implements RegenBatchIface
 	}// status()
 
 	public boolean isRunning() { return status == Status.PENDING_RESTORATION; }
-	
+
 	public boolean isActive() { return status != Status.DONE && status != Status.CANCELLED; }
-	
+
 	public boolean isDone() { return status == Status.DONE; }
-	
+
 	/* (non-Javadoc)
 	 * @see com.github.izbay.regengine.RegenBatchIface#getRestorationTime()
 	 */
@@ -110,6 +111,10 @@ public class RegenBatch implements RegenBatchIface
 	public static RegenBatch destroying(final Plugin plugin, final Iterable<Vector> blockVectors, final World world, final long delay)
 	{	return new RegenBatch(plugin, blockVectors, world, delay); }
 
+	public static RegenBatch destroying(final Plugin plugin, final Vector[] blockVectors, final World world, final long delay)
+	{	return new RegenBatch(plugin, Arrays.asList(blockVectors), world, delay); }
+
+	/**
 	/**
 	 * @param world
 	 * @param targetTime
@@ -157,7 +162,7 @@ public class RegenBatch implements RegenBatchIface
 			RegenBatch.removeFromActiveSet(this);
 			break;
 		case PENDING_RESTORATION:
-                throw new Error("Cancelling mid-regeneration not yet implemented!");
+			throw new Error("Cancelling mid-regeneration not yet implemented!");
 		case DONE:
 		case CANCELLED:
 			assert(!this.isActive());
@@ -248,7 +253,7 @@ public class RegenBatch implements RegenBatchIface
 			}// for
 
 		}// if
-		
+
 		status = Status.ALTERED;
 		return this;
 	}// batchAlter()
@@ -261,26 +266,37 @@ public class RegenBatch implements RegenBatchIface
 		assert(!activeBatches.get(batch.world).contains(batch));
 	}// removeFromActiveSet()
 
+	protected void disablePhysics()
+	{	RegEnginePlugin.getInstance().disablePhysics(); }
+
+	protected void enablePhysics()
+	{	RegEnginePlugin.getInstance().enablePhysics(); }
+
 	protected RegenBatch restore()
 	{
 		if(status != Status.PENDING_RESTORATION) throw new Error("Can only call RegenBatch.restore() on a batch 'PENDING_RESTORATION'.");
 
-		// TODO: Multiple loops, if necessary, to ensure proper replacement.
-		// TODO: Pop-to-item the blocks being replaced.
-		for(Iterator<SerializedBlock> i = this.blockOrder.descendingIterator(); i.hasNext(); )
-			//		for(Map.Entry<Location,SerializedBlock> entry : blockMap.entrySet())
+		try
 		{
-			final SerializedBlock block = i.next();
-			block.place();
-			//entry.getValue().place(entry.getKey());
-			//blockMap.remove(l);
-			//		    dataMap.remove(l);
-		}// for
+			disablePhysics();
+			// TODO: Multiple loops, if necessary, to ensure proper replacement.
+			// TODO: Pop-to-item the blocks being replaced.
+			for(Iterator<SerializedBlock> i = this.blockOrder.descendingIterator(); i.hasNext(); )
+				//		for(Map.Entry<Location,SerializedBlock> entry : blockMap.entrySet())
+			{
+				final SerializedBlock block = i.next();
+				block.place();
+			}// for
+		}// try
+		finally
+		{
+			enablePhysics();
+		}// finally
 
 		// Mark the batch as 'done', including removing it from the global map:
 		this.status = Status.DONE;
 		RegenBatch.removeFromActiveSet(this);
-		
+
 		return this;
 	}// restore()
 
@@ -295,14 +311,14 @@ public class RegenBatch implements RegenBatchIface
 				restore();
 			}// run()
 		}, this.delay);
-		
+
 		// TODO: Load warner
 		//new RestorationWarnings
-		
+
 		this.status = Status.PENDING_RESTORATION;
 		assert(this.isRunning());
-		
+
 		return this;
 	}// queueBatchRestoration()		
-	
+
 }// RegenBatch

@@ -26,7 +26,7 @@ public class RegEnginePlugin extends JavaPlugin
 		private HashMap<Location, SerializedBlock> blockMap = new HashMap<Location,SerializedBlock>();
 //		private HashMap<Location, Byte> dataMap = new HashMap<Location,Byte>();
 		private FileConfiguration config;
-		@SuppressWarnings("unused")
+//		@SuppressWarnings("unused")
 		private EventObserver eventobs = null;
 		/**
 		 * Config-file keystrings, because I amuse myself idly by turning things like these into constants.
@@ -101,6 +101,17 @@ public class RegEnginePlugin extends JavaPlugin
 			}// if
 		}// onEnable()
 		
+		public void disablePhysics()
+		{
+			assert(this.eventobs != null);
+			eventobs.setPhysics(false);
+		}// disablePhysics()
+		
+		public void enablePhysics()
+		{
+			assert(this.eventobs != null);
+			eventobs.setPhysics(true);
+		}// enablePhysics()
 		
 /*
 		@SuppressWarnings("deprecation")
