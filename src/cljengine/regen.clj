@@ -77,6 +77,10 @@
                                              VineDependingBlock
                                              VineDependingBlock$Orientation
                                              DependingBlockSet)
+           (com.github.izbay.siegeengine SiegeEnginePlugin
+                                         Ram
+                                         Weapon
+                                         WeaponEventObserver)
            (com.github.izbay.util Util)))
 
                                         ;(declare physics-blocking-handler, player-move-event-handler)
