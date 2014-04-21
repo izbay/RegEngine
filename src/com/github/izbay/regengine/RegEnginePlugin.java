@@ -17,6 +17,7 @@ import clojure.lang.Compiler;
 */
 //import clojure.lang.Var;
 
+
 import com.github.izbay.util.*;
 
 public class RegEnginePlugin extends JavaPlugin 
@@ -25,6 +26,7 @@ public class RegEnginePlugin extends JavaPlugin
 		private HashMap<Location, SerializedBlock> blockMap = new HashMap<Location,SerializedBlock>();
 //		private HashMap<Location, Byte> dataMap = new HashMap<Location,Byte>();
 		private FileConfiguration config;
+		@SuppressWarnings("unused")
 		private EventObserver eventobs = null;
 		/**
 		 * Config-file keystrings, because I amuse myself idly by turning things like these into constants.

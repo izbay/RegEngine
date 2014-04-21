@@ -1,6 +1,3 @@
-/**
- * 
- */
 package com.github.izbay.util;
 
 import java.util.HashSet;
@@ -96,8 +93,7 @@ public abstract class Util
 		{ 	return b.getLocation(); }
 
 		public static Location normalizeLocation(final Location l)
-		{	return new Location(l.getWorld(), Math.round(l.getX()), Math.round(l.getY()), Math.round(l.getZ()));}
-			
+		{	return new Location(l.getWorld(), Math.floor(l.getX()), Math.floor(l.getY()), Math.floor(l.getZ()));}
 		
 		/**
 		 * Non-mutating Vector addition.
