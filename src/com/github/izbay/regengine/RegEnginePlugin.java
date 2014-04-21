@@ -1,19 +1,14 @@
 package com.github.izbay.regengine;
 
-
-/*
 import java.util.HashMap;
 
-import org.bukkit.Effect;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.BlockState;
 import org.bukkit.block.Chest;
+import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.plugin.Plugin;
-import org.bukkit.scheduler.BukkitRunnable;
-*/
-import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;
 
 /*
@@ -22,14 +17,17 @@ import clojure.lang.Compiler;
 */
 //import clojure.lang.Var;
 
-//import com.github.izbay.util.*;
+
+import com.github.izbay.util.*;
 
 public class RegEnginePlugin extends JavaPlugin 
 {
 //		private HashMap<Location, Material> blockMap = new HashMap<Location,Material>();
-		//private HashMap<Location, SerializedBlock> blockMap = new HashMap<Location,SerializedBlock>();
+		private HashMap<Location, SerializedBlock> blockMap = new HashMap<Location,SerializedBlock>();
 //		private HashMap<Location, Byte> dataMap = new HashMap<Location,Byte>();
 		private FileConfiguration config;
+		@SuppressWarnings("unused")
+		private EventObserver eventobs = null;
 		/**
 		 * Config-file keystrings, because I amuse myself idly by turning things like these into constants.
 		 * Might be better as an enum.  This kind of design pattern gets so wearisome.
@@ -72,11 +70,11 @@ public class RegEnginePlugin extends JavaPlugin
 		}
 
 		@Override
-		public void onEnable() 
-		{
+		public void onEnable() {
 			// Load config
 			this.saveDefaultConfig();
 			config = this.getConfig();
+			eventobs = new EventObserver(this);
 			
 			// If configured to do so, check the latest version on BukkitDEV and
 			// alert if user is out of date.
@@ -86,10 +84,10 @@ public class RegEnginePlugin extends JavaPlugin
 			doParticles = this.config.getBoolean(Config.DO_PARTICLES);
 			clojureRegen = this.config.getBoolean(Config.USE_CLOJURE_REGEN);
 			
-				/*
 			// Load Clojure REGENgine implementation:
 			if (clojureRegen)
 			{
+				/*
 				try {
 					RT.loadResourceScript("cljengine/regen.clj");
 					RT.var("cljengine.mc", "*debug-print*", true);// Set to false to make (debug-print) can it
@@ -99,8 +97,8 @@ public class RegEnginePlugin extends JavaPlugin
 					// TODO Auto-generated catch block
 					e1.printStackTrace();
 				}
-			}// if
 				*/
+			}// if
 		}// onEnable()
 		
 		
@@ -121,6 +119,28 @@ public class RegEnginePlugin extends JavaPlugin
 			}// else
 		}// alter()
 */			
+		public void alter(Plugin plugin, Location l, Material m){
+			Location normal = Util.normalizeLocation(l);
+			Material backup = normal.getBlock().getType();
+			if(backup != m){
+				if(!blockMap.containsKey(normal)){
+					
+					// turns physics off
+					//eventobs.setPhysics(false);
+					
+					blockMap.put(normal, new SerializedBlock(normal.getBlock()));
+					BlockState state = normal.getBlock().getState();
+					if(state instanceof Chest){
+						((Chest)state).getBlockInventory().clear();
+					} else if(state instanceof InventoryHolder){
+						((InventoryHolder)state).getInventory().clear();
+					}
+					normal.getBlock().setType(m);
+					regen(normal);	
+				}
+			}
+		}
+		
 		/*
 		public void alter(Plugin plugin, final Vector v, final Material m)
 		{	alter(plugin, Util.getLocation(v), m); }
@@ -213,31 +233,7 @@ public class RegEnginePlugin extends JavaPlugin
 		
 		
 */
-
-		/*
-		public void alter(Plugin plugin, Location l, Material m)
-		{
-			Location normal = Util.normalizeLocation(l);
-			Material backup = normal.getBlock().getType();
-			if(backup != m){
-				if(!blockMap.containsKey(normal)){
-					blockMap.put(normal, new SerializedBlock(normal.getBlock()));
-					BlockState state = normal.getBlock().getState();
-					if(state instanceof Chest){
-						((Chest)state).getBlockInventory().clear();
-					} else if(state instanceof InventoryHolder){
-						((InventoryHolder)state).getInventory().clear();
-					}
-					normal.getBlock().setType(m);
-					regen(normal);	
-				}
-			}
-		}
-		*/
-		
-		
-		
-		/*
+		// The first prototype:
 		private void regen(final Location l){
 			
 			
@@ -254,6 +250,7 @@ public class RegEnginePlugin extends JavaPlugin
 						}
 					}, 200L-i);
 				}
+				*/
 			}
 			
 			this.getServer().getScheduler().scheduleSyncDelayedTask(this, new Runnable() {
@@ -264,7 +261,6 @@ public class RegEnginePlugin extends JavaPlugin
 				}
 			}, 200L);
 		}
-		*/
 }// RegEnginePlugin
 
 
