@@ -3,10 +3,19 @@ package com.github.izbay.regengine;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 
+/*
+ * Serialized inventroy class
+ */
 public class SerializedInventory {
     
     public SerializedItem[] inventory;
     
+    /*
+     * Preconditions
+     * construct a serilzed inventory
+     * Postconditions
+     * create a serialized inventory
+     */
     public SerializedInventory(Inventory inventory){
         if(inventory != null){
 			this.inventory = new SerializedItem[inventory.getSize()];
@@ -18,7 +27,9 @@ public class SerializedInventory {
 			this.inventory = null;
 		}
     }
-    
+    /*
+     *get the inventory 
+     */
     public ItemStack[] getInventory(){
         if(this.inventory != null){
             ItemStack[] inventory = new ItemStack[this.inventory.length];
@@ -31,7 +42,7 @@ public class SerializedInventory {
             return new ItemStack[0];
         }
     }
-    
+    //return the inventory
     public SerializedItem[] getSerializedInventory(){
     	return inventory;
     }

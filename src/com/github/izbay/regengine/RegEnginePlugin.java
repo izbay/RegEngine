@@ -70,16 +70,17 @@ public class RegEnginePlugin extends JavaPlugin
 		@Override
 		public void onDisable() {
 			active = false;
-			LinkedList<SerializedBlock> writeOut = new LinkedList<SerializedBlock>();
+			/*LinkedList<SerializedBlock> writeOut = new LinkedList<SerializedBlock>();
 			for(LinkedHashSet<RegenBatch> batchList: RegenBatch.activeBatches().values()){
 				for(RegenBatch batch: batchList){
 					writeOut.addAll(batch.blockOrder);
 				}
 			}
-			XMLFromFile.BlocksToFile(writeOut);
+			XMLFromFile.BlocksToFile(writeOut);*/
 		}
 
 		@Override
+		//enable the plugin
 		public void onEnable() {
 			// Load config
 			this.saveDefaultConfig();
@@ -111,12 +112,15 @@ public class RegEnginePlugin extends JavaPlugin
 			}// if
 		}// onEnable()
 		
+		//disable world physics
 		public void disablePhysics()
 		{
 			assert(this.eventobs != null);
 			eventobs.setPhysics(false);
 		}// disablePhysics()
 		
+		
+		//enable world physics
 		public void enablePhysics()
 		{
 			assert(this.eventobs != null);
@@ -139,7 +143,19 @@ public class RegEnginePlugin extends JavaPlugin
 				}
 			}// else
 		}// alter()
-*/			
+*/		
+		/*
+		 * Preconditons:
+		 * Perform an alteration for the world in order to place the block and have it implemented properly
+		 * 
+		 * Postconditions
+		 * Places the block properly
+		 * 
+		 * Args
+		 * Plugin, the plugin on which it will be run
+		 * Location, location of blcok
+		 * Material, material block
+		 */
 		public void alter(Plugin plugin, Location l, Material m){
 			if(!active){return;}
 			
@@ -163,100 +179,8 @@ public class RegEnginePlugin extends JavaPlugin
 				}
 			}
 		}
-		
-		/*
-		public void alter(Plugin plugin, final Vector v, final Material m)
-		{	alter(plugin, Util.getLocation(v), m); }
-		
-		public void alter(Plugin plugin, final Block b, final Material m)
-		{	alter(plugin, b.getLocation(), m); }
-		*/
-		
-		/*
-		private void regen(final Location l){
-			if(doParticles){
-				for(int i=0; i<60; i+=10){
-					this.getServer().getScheduler().scheduleSyncDelayedTask(this, new BukkitRunnable() {
-						public void run() {
-							l.getWorld().playEffect(l, Effect.MOBSPAWNER_FLAMES, 2004);
-						}
-					}, 200L-i);
-				}
-			}
-			
-			this.getServer().getScheduler().scheduleSyncDelayedTask(this, new Runnable() {
-				@SuppressWarnings("deprecation")
-				public void run() {
-					SerializedBlock restore = blockMap.get(l);
-					l.getBlock().setType(Material.getMaterial(restore.type));
-				    l.getBlock().setData(restore.data);
-				    if(restore.inventory.getInventory() != null){
-				    	BlockState state = l.getBlock().getState();
-				    	if(state instanceof Chest){
-				    		((Chest) state).getBlockInventory().setContents(restore.inventory.getInventory());
-				    	} else if(state instanceof InventoryHolder){
-				    		((InventoryHolder) state).getInventory().setContents(restore.inventory.getInventory());
-				    	}
-				    }
-				    blockMap.remove(l);
-				}
-			}, 200L);
-		}
-		
-			*/
 
-		/*
-	// Ad-hoc polymorphism.
-		public void alter(Location l){
-			alter(l, Material.AIR);
-		}
-		public void alter(final Vector v, final Material m)
-		{	alter(Util.getLocation(v), m); }
-		public void alter(final Block b, final Material m)
-		{	alter(b.getLocation(), m); }
-		*/
-
-/*
-		// It's ugly, but this is the simplest way to invoke Lisp functions from Java: convert the Java lvars into Clojure globals and follow up with eval().
-		public void alterRestore(final Location loc, final Material m)
-		{
-			//RT.var("cljengine.mc", "*debug-print*", false);
-			
-			RT.var("cljengine.regen", "alter-restore-loc", loc);
-			RT.var("cljengine.regen", "alter-restore-mat", m);
-			final Object obj = RT.readString("(cljengine.regen/alter-and-restore cljengine.regen/alter-restore-loc :new-material cljengine.regen/alter-restore-mat)");
-			assert(obj != null);
-			Compiler.eval(obj);
-		}// alterRestore()
-		
-		public void batchAlterRestore(/*final Collection<Location> final Location[] blocks, final Material m, final World w)
-		{
-			RT.var("cljengine.regen", "alter-restore-blocks", blocks);
-			RT.var("cljengine.regen", "alter-restore-mat", m);
-			// NB: At the moment, the :world keyword has no effect.
-			RT.var("cljengine.regen", "alter-restore-world", w);
-			final Object obj = RT.readString("(cljengine.regen/batch-alter-and-restore cljengine.regen/alter-restore-blocks :new-material cljengine.regen/alter-restore-mat :world cljengine.regen/alter-restore-world)");
-			assert(obj != null);
-			Compiler.eval(obj);
-		}// batchAlterRestore()
-
-		// Duplicating the preceding Clojure def. is pretty clumsy:
-		public void batchAlterRestore(/*final Collection<BlockVector> final BlockVector[] blocks, final Material m, final World w)
-		{
-			RT.var("cljengine.regen", "alter-restore-blocks", blocks);
-			RT.var("cljengine.regen", "alter-restore-mat", m);
-			// NB: At the moment, the :world keyword has no effect.
-			RT.var("cljengine.regen", "alter-restore-world", w);
-			final Object obj = RT.readString("(cljengine.regen/batch-alter-and-restore cljengine.regen/alter-restore-blocks " +
-					":new-material cljengine.regen/alter-restore-mat " +
-					":world cljengine.regen/alter-restore-world)");
-			assert(obj != null);
-			Compiler.eval(obj);
-		}// batchAlterRestore()
-		
-		
-*/
-		// The first prototype:
+		// The first prototype of our restorations
 		private void regen(final Location l){
 			
 			
@@ -265,25 +189,15 @@ public class RegEnginePlugin extends JavaPlugin
 				RestorationWarnings w = new RestorationWarnings(200L, l, this);
 				w.start();
 				
-				/*
-				for(int i=0; i<60; i+=10){
-					this.getServer().getScheduler().scheduleSyncDelayedTask(this, new BukkitRunnable() {
-						public void run() {
-							l.getWorld().playEffect(l, Effect.MOBSPAWNER_FLAMES, 2004);
-						}
-					}, 200L-i);
-				}
-				*/
 			}
 			
 			this.getServer().getScheduler().scheduleSyncDelayedTask(this, new Runnable() {
 				public void run() {
 					blockMap.get(l).place(l);
 				    blockMap.remove(l);
-		//		    dataMap.remove(l);
 				}
 			}, 200L);
 		}
-}// RegEnginePlugin
+}
 
 
