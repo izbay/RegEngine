@@ -137,6 +137,7 @@ public class DependingBlock {
 	public DependingBlockSet gravityBoundFwdDependency()
 	{
 		final Block bAbove = Util.getBlockAbove(this.block);
+		// TODO: Compare with the results of Material.hasGravity().
 		if( BlockTypes.gravityBound.contains(bAbove.getType()) )
 		{	return new DependingBlockSet(DependingBlock.from(bAbove, Action.RESTORE_AFTER_LOSS)); }// if
 		else

@@ -222,11 +222,11 @@ public class DependingBlockSet implements Iterable<DependingBlock>
 		final DependingBlockSet sOut = new DependingBlockSet(sIn); 
 		final DependingBlockSet sSearch = new DependingBlockSet(sIn);
 		
-		int loop_counter = 0;
+		//int loop_counter = 0;
 		while(!sSearch.isEmpty())
 		{
-			++loop_counter;
-			if(loop_counter > 1000000000) throw new Error("Infinite loop detected in doRevDepsSearch().");
+			//++loop_counter;
+			//if(loop_counter > 1000000000) throw new Error("Infinite loop detected in doRevDepsSearch().");
 			
 			final Iterator<DependingBlock> it = sSearch.blocks.values().iterator();
 			final DependingBlock b = it.next();

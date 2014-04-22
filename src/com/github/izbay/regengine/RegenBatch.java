@@ -6,6 +6,7 @@ package com.github.izbay.regengine;
 //import java.util.ArrayDeque;
 import java.util.Collections;
 import java.util.Arrays;
+import java.util.HashSet;
 //import java.util.Deque;
 //import java.util.HashSet;
 import java.util.Iterator;
@@ -36,6 +37,7 @@ import org.bukkit.util.Vector;
 
 
 import com.github.izbay.regengine.block.Action;
+import com.github.izbay.regengine.block.BlockTypes;
 import com.github.izbay.regengine.block.DependingBlock;
 import com.github.izbay.regengine.block.DependingBlockSet;
 //import org.bukkit.Material;
@@ -67,7 +69,7 @@ public class RegenBatch implements RegenBatchIface
 	protected Status status;
 	public final LinkedList<SerializedBlock> blockOrder = new LinkedList<SerializedBlock>();
 
-	protected static Map<World,LinkedHashSet<RegenBatch>> activeBatches = new LinkedHashMap<World,LinkedHashSet<RegenBatch>>();
+	protected static final Map<World,LinkedHashSet<RegenBatch>> activeBatches = new LinkedHashMap<World,LinkedHashSet<RegenBatch>>();
 
 	//	private BlockImage[] blocks; // Comment this out until I'm ready to use it
 
@@ -164,6 +166,7 @@ public class RegenBatch implements RegenBatchIface
 			RegenBatch.removeFromActiveSet(this);
 			break;
 		case PENDING_RESTORATION:
+			// TODO:
 			throw new Error("Cancelling mid-regeneration not yet implemented!");
 		case DONE:
 		case CANCELLED:
@@ -268,6 +271,7 @@ public class RegenBatch implements RegenBatchIface
 		return this;
 	}// batchAlter()
 
+	// Public only to be considerate.  Only to be used internally.
 	public static void removeFromActiveSet(final RegenBatch batch)
 	{
 		assert(activeBatches.containsKey(batch.world));
@@ -306,6 +310,8 @@ public class RegenBatch implements RegenBatchIface
 		// Mark the batch as 'done', including removing it from the global map:
 		this.status = Status.DONE;
 		RegenBatch.removeFromActiveSet(this);
+		// Close out the warning system (remove the reference to the existing set):
+		this.warner = new HashSet<RestorationWarnings>();
 
 		return this;
 	}// restore()
@@ -325,11 +331,15 @@ public class RegenBatch implements RegenBatchIface
 		// Enable warnings if applicable:
 		if(RegEnginePlugin.getInstance().doParticles)// TODO: Do we want to switch off all warnings if only 'doParticles' is false?
 		{
-			for(BlockVector v : this.blocks.blocks.keySet())
+			for(Map.Entry<BlockVector,DependingBlock> entry : this.blocks.blocks.entrySet())
 			{
-				final RestorationWarnings w = new RestorationWarnings(this.delay, Util.getLocation(v, world), this.plugin);
-				w.start();
-				warner.add(w);
+				// Start the warning system iff the block is of a material unhealthy to inhabit:
+				if(BlockTypes.needsWarnPlayerOnRegeneration(entry.getValue().block.getType()))
+				{
+					final RestorationWarnings w = new RestorationWarnings(this.delay, Util.getLocation(entry.getKey(), world), this.plugin);
+					w.start();
+					warner.add(w);
+				}// if
 			}// for
 		}// if
 
