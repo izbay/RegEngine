@@ -69,7 +69,7 @@ public class RegEnginePlugin extends JavaPlugin
 		public void onDisable() {
 			//TODO: Write out every map to file.
 			active = false;
-			XMLFromFile.serializeBlocks(blockMap);
+			XMLFromFile.BlocksToFile(blockMap);
 		}
 
 		@Override

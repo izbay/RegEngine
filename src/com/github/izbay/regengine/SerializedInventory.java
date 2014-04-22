@@ -18,18 +18,6 @@ public class SerializedInventory {
 			this.inventory = null;
 		}
     }
-    /*
-    public SerializedInventory(String[] inventory){
-    if(inventory != null){
-		this.inventory = new SerializedItem[inventory.length];
-			int i = 0;
-			for(String S : inventory){
-				this.inventory[i++] = new SerializedItem(S);
-			}
-		} else {
-			this.inventory = null;
-		}
-    }*/
     
     public ItemStack[] getInventory(){
         if(this.inventory != null){
@@ -42,5 +30,9 @@ public class SerializedInventory {
         } else {
             return new ItemStack[0];
         }
+    }
+    
+    public SerializedItem[] getSerializedInventory(){
+    	return inventory;
     }
 }//end SerializedInventory CLASS

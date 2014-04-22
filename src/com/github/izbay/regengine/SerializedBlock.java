@@ -35,7 +35,7 @@ public class SerializedBlock implements Comparable<SerializedBlock> {
 		this.type = type;
 		this.data = data;
 		this.signtext = signtext;
-		this.inventory = new SerializedInventory(inventory);
+		this.inventory = (inventory!=null)?new SerializedInventory(inventory):null;
 		this.x = x;
 		this.y = y;
 		this.z = z;
@@ -110,9 +110,9 @@ public class SerializedBlock implements Comparable<SerializedBlock> {
 	   return signtext;
 	}
 	
-	public String getBlockChestInventory()
+	public SerializedInventory getBlockChestInventory()
 	{
-	   return "";
+	   return inventory;
 	}
 	public String getBlockXLoc()
 	{
