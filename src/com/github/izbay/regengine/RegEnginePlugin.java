@@ -1,6 +1,8 @@
 package com.github.izbay.regengine;
 
 import java.util.HashMap;
+import java.util.LinkedHashSet;
+import java.util.LinkedList;
 
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -67,9 +69,14 @@ public class RegEnginePlugin extends JavaPlugin
 		
 		@Override
 		public void onDisable() {
-			//TODO: Write out every map to file.
 			active = false;
-			XMLFromFile.BlocksToFile(blockMap);
+			LinkedList<SerializedBlock> writeOut = new LinkedList<SerializedBlock>();
+			for(LinkedHashSet<RegenBatch> batchList: RegenBatch.activeBatches().values()){
+				for(RegenBatch batch: batchList){
+					writeOut.addAll(batch.blockOrder);
+				}
+			}
+			XMLFromFile.BlocksToFile(writeOut);
 		}
 
 		@Override

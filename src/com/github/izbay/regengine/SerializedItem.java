@@ -100,10 +100,10 @@ public class SerializedItem {
 		return type.name();
 	}
 	public String getAmount(){
-		return ((Integer)amount).toString();
+		return Integer.toString(amount);
 	}
 	public String getDurability(){
-		return ((Short)durability).toString();
+		return Short.toString(durability);
 	}
 	public String[] getLore(){
 		return lore;
@@ -127,7 +127,7 @@ public class SerializedItem {
 		return enchant;
 	}
 	public String[] getEnchantLevels(){
-		return Arrays.copyOf(enchantLevels, enchantLevels.length, String[].class);
+		return (enchantLevels!=null)?Arrays.copyOf(enchantLevels, enchantLevels.length, String[].class):null;
 	}
 	
 }//end SerializedItem CLASS
