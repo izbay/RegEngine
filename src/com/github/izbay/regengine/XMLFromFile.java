@@ -7,7 +7,6 @@ import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 
-import org.bukkit.Location;
 import org.w3c.dom.Attr;
 import org.w3c.dom.Document;
 import org.w3c.dom.NodeList;
@@ -16,12 +15,36 @@ import org.w3c.dom.Element;
 import org.w3c.dom.Text;
 
 import java.io.File;
-import java.util.Map;
+import java.util.LinkedList;
 
 public class XMLFromFile {
 
 	// store the files as blocks in the hashmap to be restored
 	public static void FileToBlock() {
+		
+		final String x;
+		final String y, z;
+		final String date;
+		final String blockType, world;
+		final String data;
+		final String[] signtext;
+		final String inventory;
+		
+		final String itemName;
+		final String materialType;
+		final String amount;
+		final String durability;
+		final String[] lore;
+
+		//Book Info
+		final boolean isBook = false;
+		final String name, author, title;
+		final String[] pages;
+
+		//Enchantment Info
+		final boolean hasEnchant = false;
+		final String[] enchant; //so tempted to name this array "hoes"
+		String[] enchantLevels;
 
 		try {
 
@@ -32,15 +55,15 @@ public class XMLFromFile {
 			DocumentBuilder dBuilder = dbFactory.newDocumentBuilder();
 			Document doc = dBuilder.parse(fXmlFile);
 
-			// optional, but recommended
-			// read this -
-			// http://stackoverflow.com/questions/13786607/normalization-in-dom-parsing-with-java-how-does-it-work
+
+
+
 			doc.getDocumentElement().normalize();
 
 			NodeList nList = doc.getElementsByTagName("Block");
 
 			for (int temp = 0; temp < nList.getLength(); temp++) {
-
+/*
 				Node nNode = nList.item(temp);
 
 				System.out.println("\nCurrent Element :" + nNode.getNodeName());
@@ -50,58 +73,60 @@ public class XMLFromFile {
 					@SuppressWarnings("unused")
 					Element eElement = (Element) nNode;
 
-					//System.out.println(eElement.getElementsByTagName("Date").item(0).getTextContent());
-					// eElement.getElementsByTagName("World").item(0).getTextContent(),
-					// eElement.getElementsByTagName("BlockType").item(0).getTextContext(),
-					// eElement.getElementsByTagName("Data").item(0).getTextContext(),
-					// eElement.getElementsByTagName("Sign Text").item(0).getTextContext(),
-					// eElement.getElementsByTagName("Chest Inventory").item(0).getTextContext(),
-						//if there is a chest inventroy perform this
-						//NodeList iList = doc.getElementsByTagName("Inventory");
-							//for (int j = 0; j < iList.getLength(); j++) 
-							//{
-								//Node cNode = iList.item(j)
-								//Element chestElement = (Element) nNode;
-								//chestElement.getAttribute("item name");
-								//chestElement.getElementsByTagName("type")
-								//if(isBook)
-								//{
-								//chestElement.getElementsByTagName("Name")
-								//chestElement.getElementsByTagName("title")
-								//chestElement.getElementsByTagName("Author")
-								//chestElement.getElementsByTagName("pages")
-								//}
-								//if(enchantment)
-								//{
-								//chestElement.getElementsByTagName("enchantname")
-								//chestElement.getElementsByTagName("enchantLevels")
-								//}
-								//chestElement.getElementsByTagName("amount")
-								//chestElement.getElementsByTagName("durability")
-								//chestElement.getElementsByTagName("lore")
-							//}
-					
-					
-					// eElement.getElementsByTagName("xLoc").item(i).getTextContext()
-					// eElement.getElementsByTagName("yLoc").item(i).getTextContext()
-					// eElement.getElementsByTagName("zLoc").item(i).getTextContext());
+					date =eElement.getElementsByTagName("Date").item(0).getTextContent();
+					world = eElement.getElementsByTagName("World").item(0).getTextContent();
+					blockType = eElement.getElementsByTagName("BlockType").item(0).getTextContent();
+					data = eElement.getElementsByTagName("Data").item(0).getTextContent();
+					signtext = eElement.getElementsByTagName("Sign Text").item(0).getTextContent();
+					inventory = eElement.getElementsByTagName("Chest Inventory").item(0).getTextContent();
+						
+					//check for inventory stuffs
+					if(inventory != null)
+						{
 
-				}
+						NodeList iList = doc.getElementsByTagName("Inventory").item(0).getTextContent();
+							for (int j = 0; j < iList.getLength(); j++) 
+							{
+
+								Node cNode = iList.item(j)
+									Element chestElement = (Element) nNode;
+								itemName = chestElement.getAttribute("Item Name");
+								materialType = chestElement.getElementsByTagName("Material Type").item(0).getTextContent();
+								isBook = Boolean.valueOf(chestElement.getAttribute("isBook"));
+								if(isBook)
+								{
+
+									title = chestElement.getElementsByTagName("Title").item(0).getTextContent();
+									Author = chestElement.getElementsByTagName("Author").item(0).getTextContent();
+									pages = chestElement.getElementsByTagName("Pages").item(0).getTextContent();
+								}
+								enchant = chestElement.getElementsByTagName("Enchant").item(0).getTextContent();
+								if(enchant != null)
+								{
+									enchantLevels = chestElement.getElementsByTagName("EnchantLevels").item(0).getTextContent();
+								}
+
+								amount = chestElement.getElementsByTagName("Amount").item(0).getTextContent();
+								durability = chestElement.getElementsByTagName("Durability").item(0).getTextContent();
+								lore = chestElement.getElementsByTagName("Lore").item(0).getTextContent();
+							}
+						}
+
+					
+
+					 x = eElement.getElementsByTagName("xLoc").item(0).getTextContent();
+					 y = eElement.getElementsByTagName("yLoc").item(0).getTextContent();
+					 z = eElement.getElementsByTagName("zLoc").item(0).getTextContent();
+
+				}*/
 			}
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
 	}
 	
-	private static Text checkAndCreate(Document doc, String arg){
-		//if(arg == null){
-		//	arg = "";
-		//}
-		return doc.createTextNode(arg);
-	}
-	
-	public static void BlocksToFile(Map<Location, SerializedBlock> map) {
-		if(map.isEmpty()){return;}
+	public static void BlocksToFile(LinkedList<SerializedBlock> writeOut) {
+		if(writeOut.isEmpty()){return;}
 		try {
 			DocumentBuilderFactory docFactory = DocumentBuilderFactory
 					.newInstance();
@@ -111,8 +136,9 @@ public class XMLFromFile {
 			doc.appendChild(rootElement);
 			
 			int i=0;
-			for(SerializedBlock sb: map.values()){
+			for(SerializedBlock sb: writeOut){
 				SerializedBlock block = sb;
+				
 				
 				// root elements
 				Element thisBlock = doc.createElement("Block");
@@ -170,43 +196,61 @@ public class XMLFromFile {
 						itemattr.setValue(Integer.toString(j++));
 						thisItem.setAttributeNode(itemattr);
 						
-						Element Name = doc.createElement("Name");
-						Name.appendChild(checkAndCreate(doc, item.getName()));
-						thisItem.appendChild(Name);
+						Element ItemName = doc.createElement("ItemName");
+						ItemName.appendChild(doc.createTextNode(item.getName()));
+						thisItem.appendChild(ItemName);
 						
 						Element Amount = doc.createElement("Amount");
-						Amount.appendChild(checkAndCreate(doc, item.getAmount()));
+						Amount.appendChild(doc.createTextNode(item.getAmount()));
 						thisItem.appendChild(Amount);
 						
-						Element Durability = doc.createElement("Durability");
-						Durability.appendChild(checkAndCreate(doc, item.getDurability()));
-						thisItem.appendChild(Durability);
+						Element Lore = doc.createElement("Lore");
+						String[] lore = item.getLore();
+						if(lore != null){
+							for(String s : lore){
+								Lore.appendChild(doc.createTextNode(s));
+							}
+							thisItem.appendChild(Lore);
+						}
 						
-						/*Insert all the item fields here.
-						public String[] getLore(){
-							return lore;
+						Element isBook = doc.createElement("isBook");
+						isBook.appendChild(doc.createTextNode(item.isBook()));
+						thisItem.appendChild(isBook);
+						
+						Element Title = doc.createElement("Title");
+						Title.appendChild(doc.createTextNode(item.getTitle()));
+						thisItem.appendChild(Title);
+						
+						Element Pages = doc.createElement("Pages");
+						String[] pages = item.getPages();
+						if(pages != null){
+							for(String s : pages){
+								Pages.appendChild(doc.createTextNode(s));
+							}
+							thisItem.appendChild(Pages);
 						}
-						public boolean isBook(){
-							return isBook;
+						
+						Element Enchants = doc.createElement("Enchants");
+						String[] enchants = item.getEnchants();
+						if(enchants != null){
+							for(String s : enchants){
+								Enchants.appendChild(doc.createTextNode(s));
+							}
+							thisItem.appendChild(Enchants);
 						}
-						public String getName(){
-							return name;
+						
+						
+						Element EnchantLevels = doc.createElement("EnchantLevels");
+						String[] enchantLevels = item.getEnchantLevels();
+						if(enchantLevels != null){
+							for(String s : enchantLevels){
+								EnchantLevels.appendChild(doc.createTextNode(s));
+							}
+							thisItem.appendChild(EnchantLevels);
 						}
-						public String getAuthor(){
-							return author;
-						}
-						public String getTitle(){
-							return title;
-						}
-						public String[] getPages(){
-							return pages;
-						}
-						public String[] getEnchants(){
-							return enchant;
-						}
-						public Integer[] getEnchantLevels(){
-							return enchantLevels;
-						}*/
+						
+						if(thisItem!=null)
+						ChestInventory.appendChild(thisItem);
 					}
 				}
 				thisBlock.appendChild(ChestInventory);

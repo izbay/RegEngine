@@ -45,7 +45,7 @@ public class SerializedBlock implements Comparable<SerializedBlock> {
 	public void place(Location l) {
 		l.getBlock().setType(Material.getMaterial(type));
 	    l.getBlock().setData(data);
-	    if(inventory.getInventory() != null){
+	    if(inventory != null){
 	    	BlockState state = l.getBlock().getState();
 	    	if(state instanceof Chest){
 	    		((Chest) state).getBlockInventory().setContents(inventory.getInventory());
