@@ -76,10 +76,11 @@ public class RegEnginePlugin extends JavaPlugin
 		
 		public void loadClojure()
 		{
-			this.getServer().getScheduler().runTaskLaterAsynchronously(this, new Runnable() 
+			/*this.getServer().getScheduler().runTaskLaterAsynchronously(this, new Runnable() 
 			{
 				public void run()
 				{
+				*/
 					try {
 						RT.loadResourceScript("cljengine/regen.clj");
 						RT.var("cljengine.mc", "*debug-print*", true);// Set to false to make (debug-print) can it
@@ -89,8 +90,10 @@ public class RegEnginePlugin extends JavaPlugin
 						// This is an auto-generated catch block.
 						e1.printStackTrace();
 					}// catch
+					/*
 				}// run()
 			}, 60L);
+			*/
 		}// loadClojure()
 
 		@Override
