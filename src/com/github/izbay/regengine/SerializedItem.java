@@ -29,7 +29,16 @@ public class SerializedItem {
 	 private String[] enchant; //so tempted to name this array "hoes"
 	 private Integer[] enchantLevels;
 
-	public SerializedItem(ItemStack I){
+	 /*
+	  * Pre-conditions:
+	  * -create new serialized item from stack
+	  * Post-conditions:
+	  * -new serialized item is created
+	  * 
+	  * args
+	  * -ItemStack I is a stack of the items within the inventory
+	  */
+	 public SerializedItem(ItemStack I){
 	    
 	    //Standard Info
 		this.type = I.getType();
@@ -70,6 +79,13 @@ public class SerializedItem {
 	}//end SerializedItem CONSTRUCTOR
 	
 	//Alrighty. Time for de-objectifying.
+	 /*
+	  * Pre-conditions:
+	  * grab the item from the stack
+	  * 
+	  * Post-conditions:
+	  * return the item from the stacks
+	  */
 	public ItemStack getItem(){
 	    //Standard Info
 	    ItemStack item = new ItemStack(type, amount, durability);
@@ -96,6 +112,8 @@ public class SerializedItem {
         return item;
     }
 	
+	
+	//GETTERS FOR OTHER FILE TO STORE DATA AS A STRING
 	public String getType(){
 		return type.name();
 	}

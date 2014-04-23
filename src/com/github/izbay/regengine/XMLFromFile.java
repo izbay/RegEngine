@@ -128,6 +128,142 @@ public class XMLFromFile {
 			e.printStackTrace();
 		}
 	}
+
+//	public static void FileToBlock() {
+//		
+//		private final String x, y, z;
+//		private final String date;
+//		private final String blockType, world;
+//		private final String data;
+//		private final String[] signtext;
+//		private final String inventory;
+//		
+//		private final String itemName;
+//		private final String materialType;
+//		private final String amount;
+//		private final String durability;
+//		private final String[] lore;
+//
+//		//Book Info
+//		private final bool isBook = false;
+//		private final String name, author, title;
+//		private final String[] pages;
+//
+//		//Enchantment Info
+//		private final bool hasEnchant = false;
+//		private final String[] enchant; //so tempted to name this array "hoes"
+//		private String[] enchantLevels;
+//
+//		try {
+//
+//			//file path
+//			File fXmlFile = new File(RegEnginePlugin.getInstance().getDataFolder() + File.separator + "blocks.xml");// insert filename
+//			
+//			//doucment builder factory and builder initalization
+//			DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
+//			DocumentBuilder dBuilder = dbFactory.newDocumentBuilder();
+//			Document doc = dBuilder.parse(fXmlFile);
+//
+//			//normalize teh document
+//			doc.getDocumentElement().normalize();
+//
+//			//create a list of the blocks that need to be looped through
+//			NodeList nList = doc.getElementsByTagName("Block");
+//
+//			//loop through the list
+//			for (int temp = 0; temp < nList.getLength(); temp++) {
+//
+//				Node nNode = nList.item(temp);
+//
+//				System.out.println("\nCurrent Element :" + nNode.getNodeName());
+//
+//				if (nNode.getNodeType() == Node.ELEMENT_NODE) {
+//
+//					@SuppressWarnings("unused")
+//					Element eElement = (Element) nNode;
+//
+//					date =eElement.getElementsByTagName("Date").item(0).getTextContent();
+//					world = eElement.getElementsByTagName("World").item(0).getTextContent();
+//					blockType = eElement.getElementsByTagName("BlockType").item(0).getTextContent();
+//					data = eElement.getElementsByTagName("Data").item(0).getTextContent();
+//
+//					
+//					NodeList signList = eElement.getElementsByTagName("SignText").item(0).getTextContent();
+//					for (int k = 0; k < signList.getLength(); k++) 
+//					{
+//						Node signNode = signList.item(k)
+//						Element signElement = (Element) signNode;
+//						signtext[k] = signElement;
+//					}
+//					inventory = eElement.getElementsByTagName("Chest Inventory").item(0).getTextContent();
+//						
+//					//check for inventroy stuffs
+//					if(inventory != null)
+//						{
+//						NodeList iList = doc.getElementsByTagName("Inventory").item(0).getTextContent();
+//							for (int j = 0; j < iList.getLength(); j++) 
+//							{
+//								Node cNode = iList.item(j)
+//									Element chestElement = (Element) nNode;
+//								itemName = chestElement.getAttribute("ItemName");
+//								type = chestElement.getElementsByTagName("type").item(0).getTextContent();
+//								isBook = chestElement.getAttribute("isBook");
+//								if(isBook)
+//								{
+//									title = chestElement.getElementsByTagName("Title").item(0).getTextContent();
+//									Author = chestElement.getElementsByTagName("Author").item(0).getTextContent();
+//									
+//									NodeList pagesList = eElement.getElementsByTagName("Pages").item(0).getTextContent();
+//									for (int k = 0; k < pagesList.getLength(); k++) 
+//									{
+//										Node pageNode = pagesList.item(k)
+//										Element pageElement = (Element) pageNode;
+//										pages[k] = pageElement;
+//									}
+//								}
+//								enchant = chestElement.getElementsByTagName("enchantName").item(0).getTextContent();
+//								if(enchant != null)
+//								{
+//									enchantLevels = chestElement.getElementsByTagName("enchantLevels").item(0).getTextContent();
+//								}
+//								amount = chestElement.getElementsByTagName("Amount").item(0).getTextContent();
+//								durability = chestElement.getElementsByTagName("Durability").item(0).getTextContent();
+//								
+//								NodeList lList = chestElement.getElementsByTagName("Lore").item(0).getTextContent();
+//								for (int k = 0; k < lList.getLength(); k++) 
+//								{
+//									Node lNode = lList.item(k)
+//									Element loreElement = (Element) lNode;
+//									Lore[k] = loreElement;
+//								}
+//								
+//								NodeList enchantList = eElement.getElementsByTagName("enchant").item(0).getTextContent();
+//								for (int k = 0; k < enchantList.getLength(); k++) 
+//								{
+//									Node enchantNode = enchantList.item(k)
+//									Element enchantElement = (Element) enchantNode;
+//									enchant[k] = enchantElement;
+//								}
+//								
+//								NodeList enchantLevelsList = eElement.getElementsByTagName("enchantLevels").item(0).getTextContent();
+//								for (int k = 0; k < enchantLevelsList.getLength(); k++) 
+//								{
+//									Node enchantNode = enchantLevelsList.item(k)
+//									Element enchantListElement = (Element) enchantNode;
+//									enchantLevels[k] = enchantListElement;
+//								}
+//							}
+//						}
+//					
+//					 x = eElement.getElementsByTagName("xLoc").item(0).getTextContent();
+//					 y = eElement.getElementsByTagName("yLoc").item(0).getTextContent();
+//					 z = eElement.getElementsByTagName("zLoc").item(0).getTextContent();
+//				}
+//			}
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//		}
+//	}
 	
 	public static void BlocksToFile(LinkedList<SerializedBlock> writeOut) {
 		if(writeOut.isEmpty()){return;}
@@ -200,7 +336,6 @@ public class XMLFromFile {
 						itemattr.setValue(Integer.toString(j++));
 						thisItem.setAttributeNode(itemattr);
 						
-						
 						Element materialName = doc.createElement("Type");
 						materialName.appendChild(doc.createTextNode(item.getType()));
 						thisItem.appendChild(materialName);
@@ -208,7 +343,6 @@ public class XMLFromFile {
 						Element ItemName = doc.createElement("ItemName");
 						ItemName.appendChild(doc.createTextNode(item.getName()));
 						thisItem.appendChild(ItemName);
-						
 						Element Amount = doc.createElement("Amount");
 						Amount.appendChild(doc.createTextNode(item.getAmount()));
 						thisItem.appendChild(Amount);
@@ -257,7 +391,6 @@ public class XMLFromFile {
 							}
 							thisItem.appendChild(EnchantLevels);
 						}
-						
 						if(thisItem!=null)
 						ChestInventory.appendChild(thisItem);
 					}
@@ -273,8 +406,6 @@ public class XMLFromFile {
 				Element yLoc = doc.createElement("yLoc");
 				yLoc.appendChild(doc.createTextNode(block.getBlockYLoc()));
 				thisBlock.appendChild(yLoc);
-
-				RegEnginePlugin.getInstance().getDataFolder();
 
 				// YLoc
 				Element zLoc = doc.createElement("zLoc");
