@@ -1,69 +1,35 @@
+
 package com.github.izbay.regengine;
 
-//import java.util.LinkedHashSet;
-//import java.util.Set;
-
-//import java.util.ArrayDeque;
-import java.util.Collections;
-import java.util.Arrays;
-import java.util.HashSet;
-//import java.util.Deque;
-//import java.util.HashSet;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
-import java.util.Map;
-//import java.util.LinkedHashMap;
-import java.util.LinkedList;
-//import java.util.List;
-//import java.util.Map;
-import java.util.Set;
-
-//import net.minecraft.server.v1_7_R3.Block;
-//import net.minecraft.server.v1_7_R3.Material;
-
-//import org.bukkit.Location;
+import java.util.*; // I get really sick of micromanaging these
 import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockState;
 import org.bukkit.block.Chest;
-//import org.bukkit.entity.Player;
 import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.util.BlockVector;
 import org.bukkit.util.Vector;
-//import java.util.Collection;
+import com.github.izbay.regengine.block.*;
+import com.github.izbay.util.*;
 
-
-import com.github.izbay.regengine.block.Action;
-import com.github.izbay.regengine.block.BlockTypes;
-import com.github.izbay.regengine.block.DependingBlock;
-import com.github.izbay.regengine.block.DependingBlockSet;
-//import org.bukkit.Material;
-//import org.bukkit.block.Block;
-//import org.bukkit.block.BlockFace;
-//import org.bukkit.block.BlockFace;
-//import java.util.*;
-//import org.bukkit.util.BlockVector;
-import com.github.izbay.util.Util;
-
-//import com.github.izbay.regengine.block.Action;
-//import com.github.izbay.regengine.block.DependingBlock;
-//import com.github.izbay.regengine.block.DependingBlockSet;
-//import com.github.izbay.util.Util;
-
-//import com.github.izbay.util.Util;
-
+/**
+ * @author J. Jakes-Schauer
+ *
+ */
 public class RegenBatch implements RegenBatchIface 
 {
-	public static enum Status { UNUSED, ALTERED, PENDING_RESTORATION, DONE, CANCELLED };
+	public static enum Status { PENDING_ALTERATION, ALTERED_BUT_NOT_QUEUED, PENDING_RESTORATION, DONE, CANCELLED };
+	public static enum Type { DESTRUCTION, CREATION };
 
 	protected final World world;
+	protected long queueTime = 0;
 	protected final long delay;
 	public final DependingBlockSet blocks;
 	public final Material newMaterial;
 	public final Plugin plugin;
+	public final Type batchType;
 	public Set<RestorationWarnings> warner = new LinkedHashSet<RestorationWarnings>();
 	//public Map<Location, SerializedBlock> blockMap;
 	protected Status status;
@@ -84,6 +50,12 @@ public class RegenBatch implements RegenBatchIface
 
 	@Override
 	public long delay() { return delay; }
+	
+	/**
+	 * Returns zero if the batch hasn't been queued yet.  Normally this won't be seen.
+	 * @return time at which batch was queued for regeneration.
+	 */
+	public long queueTime() { return queueTime; }
 
 	public Status status() 
 	{ 
@@ -92,8 +64,20 @@ public class RegenBatch implements RegenBatchIface
 		return this.status; 
 	}// status()
 
-	public boolean isRunning() { return status == Status.PENDING_RESTORATION; }
+	/**
+	 * Alias for isQueued().
+	 * @return
+	 */
+	public boolean isRunning() { return isQueued(); }
+	
+	/**
+	 * @return true if the batch restoration timer has been started.
+	 */
+	public boolean isQueued() { return status == Status.PENDING_RESTORATION; }
 
+	/**
+	 * @return true if the batch is "still supposed to be" run but has not been used to alter the World.
+	 */
 	public boolean isActive() { return status != Status.DONE && status != Status.CANCELLED; }
 
 	public boolean isDone() { return status == Status.DONE; }
@@ -102,42 +86,85 @@ public class RegenBatch implements RegenBatchIface
 	 * @see com.github.izbay.regengine.RegenBatchIface#getRestorationTime()
 	 */
 	@Override
-	public long getRestorationTime() { return delay + world.getFullTime(); }
+	public long getRestorationTime() 
+	{ return (queueTime() == 0) ? 0 : delay + queueTime; }
 
 
 	/**
-	 * Factory method.
+	 * Factory method.  Intended as the 
 	 * @param blockVectors
 	 * @param world
 	 * @param targetTime
 	 * @return
 	 */
-	public static RegenBatch destroying(final Plugin plugin, final Iterable<Vector> blockVectors, final World world, final long delay)
-	{	return new RegenBatch(plugin, blockVectors, world, delay); }
-
-	public static RegenBatch destroying(final Plugin plugin, final Vector[] blockVectors, final World world, final long delay)
-	{	return new RegenBatch(plugin, Arrays.asList(blockVectors), world, delay); }
-
+	public static RegenBatch destroying(final Plugin plugin, final World world, final Iterable<Vector> blockVectors, final long delay)
+	{	return new RegenBatch(plugin, world, blockVectors, delay); }
+	public static RegenBatch destroying(final Plugin plugin, final World world, final Vector[] blockVectors, final long delay)
+	{	return destroying(plugin, world, Arrays.asList(blockVectors), delay); }
+	
+	public static RegenBatch altering(final Plugin plugin, final World w, final Iterable<Vector> blockVectors, final Material newMat, final long delay)
+	{
+		if(BlockTypes.isDestroyed(newMat))
+		{	return( destroying(plugin, w, blockVectors, delay) ); }// if
+		else
+		{	return new RegenBatch(plugin, w, blockVectors, delay); }// else
+	}// altering()
 	/**
-	/**
+	 * Synonym for RegenBatch.destroying().
+	 * @param plugin
 	 * @param world
-	 * @param targetTime
+	 * @param blockVectors
+	 * @param delay
+	 * @return
 	 */
-	public RegenBatch(final Plugin plugin, final Iterable<Vector> blockVectors, final World world, final long delay) {
+	public static RegenBatch altering(final Plugin plugin, final World world, final Iterable<Vector> blockVectors, final long delay)
+	{	return destroying(plugin, world, blockVectors, delay); }
+	
+	/**
+	 * Primary "creation" batch constructor.  Use factory method RegenBatch.altering() client-side.
+	 * @param plugin
+	 * @param world
+	 * @param blockVectors
+	 * @param newMat
+	 * @param delay
+	 */
+
+	/*
+	private RegenBatch(final Plugin plugin, final World world, final Iterable<Vector> blockVectors, final Material newMat, final long delay)
+	{
 		super();
+		
+		this.plugin = plugin;
+		this.world = world;
+		this.newMaterial = newMat;
+		this.delay = delay;
+		this.batchType = (BlockTypes.isDestroyed(newMat) ? Type.DESTRUCTION : Type.CREATION);
+		
+		RegenBatch.ensureInActiveSet(this);
+		
+		// FIXME: 
+	}// ctor
+	*/
 
-		if(!RegenBatch.activeBatches.containsKey(world)) RegenBatch.activeBatches.put(world, new LinkedHashSet<RegenBatch>());
-		assert(RegenBatch.activeBatches.containsKey(world));
-
-		assert(!RegenBatch.activeBatches.get(world).contains(this));
-		RegenBatch.activeBatches.get(world).add(this);
-		assert(!RegenBatch.activeBatches.get(world).contains(this));
-
+	/**
+	 * Primary destruction constructor; for internal use.  Externally the factory methods are preffered.
+	 * @param plugin
+	 * @param blockVectors
+	 * @param world
+	 * @param delay
+	 */
+	private RegenBatch(final Plugin plugin, final World world, final Iterable<Vector> blockVectors, final long delay) {
+		super();
+		
 		//		this.blocks = blocks;
+		this.batchType = Type.DESTRUCTION;
 		this.plugin = plugin;
 		this.world = world;
 		this.newMaterial = Material.AIR;
 		this.delay = delay;
+		
+		RegenBatch.ensureInActiveSet(this);
+		
 		final DependingBlockSet sIn = new DependingBlockSet();
 		for(Vector v : blockVectors)
 		{ 
@@ -147,7 +174,7 @@ public class RegenBatch implements RegenBatchIface
 		}// for
 
 		this.blocks = sIn.doFullDependencySearch();
-		this.status = Status.UNUSED;
+		this.status = Status.PENDING_ALTERATION;
 	}// ctor
 
 
@@ -160,8 +187,8 @@ public class RegenBatch implements RegenBatchIface
 	{
 		switch(this.status)
 		{
-		case UNUSED:
-		case ALTERED:
+		case PENDING_ALTERATION:
+		case ALTERED_BUT_NOT_QUEUED:
 			this.status = Status.CANCELLED;
 			RegenBatch.removeFromActiveSet(this);
 			break;
@@ -212,19 +239,19 @@ public class RegenBatch implements RegenBatchIface
 	public RegenBatch alterAndRestore()
 	{
 		batchAlter();
-		assert(status == Status.ALTERED);
+		assert(status == Status.ALTERED_BUT_NOT_QUEUED);
 		queueBatchRestoration();
 		assert(this.isRunning());
 		return this;
 	}// destroyAndRestore()
 
 	/**
-	 * Does *not* queue for regeneration.  To cause that as well, use .alterAndRestore().
+	 * For internal use.  Does *not* queue for regeneration.  To cause that as well, use .alterAndRestore().
 	 * @return
 	 */
 	public RegenBatch batchAlter()
 	{
-		if (status != Status.UNUSED)
+		if (status != Status.PENDING_ALTERATION)
 		{	throw new Error("Called RegenBatch.batchAlter() on an already-altered Batch.  (I think.)"); }// if
 		else if(!blocks.isEmpty())
 		{
@@ -267,11 +294,24 @@ public class RegenBatch implements RegenBatchIface
 
 		}// if
 
-		status = Status.ALTERED;
+		status = Status.ALTERED_BUT_NOT_QUEUED;
 		return this;
 	}// batchAlter()
+	
+	public static void ensureInActiveSet(final RegenBatch batch)
+	{
+		if(!RegenBatch.activeBatches.containsKey(batch.world())) RegenBatch.activeBatches.put(batch.world(), new LinkedHashSet<RegenBatch>());
+		assert(RegenBatch.activeBatches.containsKey(batch.world()));
 
-	// Public only to be considerate.  Only to be used internally.
+		assert(!RegenBatch.activeBatches.get(batch.world).contains(batch));
+		RegenBatch.activeBatches.get(batch.world).add(batch);
+		assert(!RegenBatch.activeBatches.get(batch.world).contains(batch));
+	}// ensureInActiveSet()
+
+	/**
+	 * Public only to be considerate.  Only to be used internally.
+	 * @param batch
+	 */
 	public static void removeFromActiveSet(final RegenBatch batch)
 	{
 		assert(activeBatches.containsKey(batch.world));
@@ -316,16 +356,22 @@ public class RegenBatch implements RegenBatchIface
 		return this;
 	}// restore()
 
+	/**
+	 * For internal use.  Called by batchAlterAndRestore().
+	 * @return
+	 */
 	public RegenBatch queueBatchRestoration()
 	{
-		if(status != Status.ALTERED)
+		if(status != Status.ALTERED_BUT_NOT_QUEUED)
 		{	throw new Error("Can only call RegenBatch.queueBatchRestoration() with an 'ALTERED' status.  Did you run .batchAlter() first?"); }// if
 
+		this.queueTime = world.getFullTime();
+		
 		plugin.getServer().getScheduler().scheduleSyncDelayedTask(plugin, new Runnable() {
 			public void run() 
 			{
 				restore();
-			}// run()
+			}// λ
 		}, this.delay);
 
 		// Enable warnings if applicable:

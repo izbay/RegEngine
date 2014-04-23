@@ -66,6 +66,9 @@ Arrays.asList(new Material[]
 	public static boolean needsWarnPlayerOnRegeneration(final Material m)
 	{	return m.isSolid() || liquid.contains(m); }
 	
+	public static boolean isDestroyed(final Material m)
+	{	return m == Material.AIR; }
+	
 	/*  Additions to CompoundDependingBlock.java may have made these unnecessary:
 	public static BlockState[] getRestOfBed(final BlockState bs)
 	{

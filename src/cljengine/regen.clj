@@ -81,7 +81,19 @@
                                          Ram
                                          Weapon
                                          WeaponEventObserver)
-           (com.github.izbay.util Util)))
+           (com.github.izbay.util Util))
+  (:import (javax.xml.parsers DocumentBuilderFactory
+                              DocumentBuilder)
+           (javax.xml.transform Transformer
+                                TransformerFactory)
+           javax.xml.transform.dom.DOMSource ;
+           javax.xml.transform.stream.StreamResult
+           (org.w3c.dom Attr             ;
+                        Document;
+                        NodeList;
+                        Node;
+                        Element;
+                        Text)))
 
                                         ;(declare physics-blocking-handler, player-move-event-handler)
 

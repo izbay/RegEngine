@@ -19,6 +19,10 @@ import java.util.LinkedList;
 
 public class XMLFromFile {
 
+	// Helpers:
+	public static String getXMLFileName() { return RegEnginePlugin.getInstance().getDataFolder() + File.separator + "blocks.xml"; }
+	public static String getTextFileName() { return RegEnginePlugin.getInstance().getDataFolder() + File.separator + "blocks.txt"; }
+
 	// store the files as blocks in the hashmap to be restored
 	public static void FileToBlock() {
 		
@@ -48,7 +52,7 @@ public class XMLFromFile {
 
 		try {
 
-			File fXmlFile = new File(RegEnginePlugin.getInstance().getDataFolder() + File.separator + "blocks.xml");// insert filename
+			File fXmlFile = new File(XMLFromFile.getXMLFileName());// insert filename
 																// here
 			DocumentBuilderFactory dbFactory = DocumentBuilderFactory
 					.newInstance();
@@ -196,6 +200,11 @@ public class XMLFromFile {
 						itemattr.setValue(Integer.toString(j++));
 						thisItem.setAttributeNode(itemattr);
 						
+						
+						Element materialName = doc.createElement("Type");
+						materialName.appendChild(doc.createTextNode(item.getType()));
+						thisItem.appendChild(materialName);
+						
 						Element ItemName = doc.createElement("ItemName");
 						ItemName.appendChild(doc.createTextNode(item.getName()));
 						thisItem.appendChild(ItemName);
@@ -265,6 +274,8 @@ public class XMLFromFile {
 				yLoc.appendChild(doc.createTextNode(block.getBlockYLoc()));
 				thisBlock.appendChild(yLoc);
 
+				RegEnginePlugin.getInstance().getDataFolder();
+
 				// YLoc
 				Element zLoc = doc.createElement("zLoc");
 				zLoc.appendChild(doc.createTextNode(block.getBlockZLoc()));
@@ -275,7 +286,7 @@ public class XMLFromFile {
 					.newInstance();
 			Transformer transformer = transformerFactory.newTransformer();
 			DOMSource source = new DOMSource(doc);
-			StreamResult result = new StreamResult(new File(RegEnginePlugin.getInstance().getDataFolder() + File.separator + "blocks.txt"));
+			StreamResult result = new StreamResult(new File(XMLFromFile.getTextFileName()));
 
 			transformer.transform(source, result);
 			
