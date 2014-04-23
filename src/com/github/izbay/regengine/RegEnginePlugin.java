@@ -1,9 +1,7 @@
 package com.github.izbay.regengine;
 
+import java.io.IOException;
 import java.util.HashMap;
-import java.util.LinkedHashSet;
-import java.util.LinkedList;
-
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.BlockState;
@@ -13,11 +11,8 @@ import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
 
-/*
 import clojure.lang.RT;
-import clojure.lang.Compiler;
-*/
-//import clojure.lang.Var;
+//import clojure.lang.Compiler;
 
 
 import com.github.izbay.util.*;
@@ -78,6 +73,25 @@ public class RegEnginePlugin extends JavaPlugin
 			}
 			XMLFromFile.BlocksToFile(writeOut);*/
 		}
+		
+		public void loadClojure()
+		{
+			this.getServer().getScheduler().runTaskLaterAsynchronously(this, new Runnable() 
+			{
+				public void run()
+				{
+					try {
+						RT.loadResourceScript("cljengine/regen.clj");
+						RT.var("cljengine.mc", "*debug-print*", true);// Set to false to make (debug-print) can it
+						//RT.var("cljengine.regen", "regen-total-delay", 200); // 10s default wait
+						//RT.var("cljengine.regen", "regen-warning-period", 20); // Shorter default period
+					} catch (IOException e1) {
+						// This is an auto-generated catch block.
+						e1.printStackTrace();
+					}// catch
+				}// run()
+			}, 60L);
+		}// loadClojure()
 
 		@Override
 		//enable the plugin
@@ -95,21 +109,9 @@ public class RegEnginePlugin extends JavaPlugin
 			doParticles = this.config.getBoolean(Config.DO_PARTICLES);
 			clojureRegen = this.config.getBoolean(Config.USE_CLOJURE_REGEN);
 			active = true;
-			// Load Clojure REGENgine implementation:
-			if (clojureRegen)
-			{
-				/*
-				try {
-					RT.loadResourceScript("cljengine/regen.clj");
-					RT.var("cljengine.mc", "*debug-print*", true);// Set to false to make (debug-print) can it
-					RT.var("cljengine.regen", "regen-total-delay", 200); // 10s default wait
-					RT.var("cljengine.regen", "regen-warning-period", 20); // Shorter default period
-				} catch (IOException e1) {
-					// TODO Auto-generated catch block
-					e1.printStackTrace();
-				}
-				*/
-			}// if
+
+			// Load Clojure REGENgine support:
+			if (clojureRegen) {	loadClojure(); }// if
 		}// onEnable()
 		
 		//disable world physics
