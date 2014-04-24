@@ -183,7 +183,6 @@ you can try :period and :delay to get (repeated-task); but if you use :times, yo
    [(instance? Long task)
     (debug-println "Cancelling task" task)
     (.cancelTask (scheduler) task)]
-   ;; The Long requirement was a nasty bug source.
    [(number? task) (cancel-task (long task))]
    ;; The absence of the 'long' cast was a nasty bug:
    [(instance? BukkitTask task) (cancel-task (long (.getTaskId task)))]

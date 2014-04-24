@@ -1,17 +1,8 @@
 package com.github.izbay.regengine.block;
 
-//import java.util.Collection;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-//import java.util.Set;
-//import java.util.LinkedList;
-//import java.util.Iterator;
-//import java.util.HashSet;
-import java.util.Map;
+import java.util.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockState;
-//import java.util.Set;
 import org.bukkit.util.BlockVector;
 
 import com.github.izbay.regengine.BlockImage;
@@ -259,4 +250,23 @@ public class DependingBlockSet implements Iterable<DependingBlock>
 	
 	public DependingBlockSet doFullDependencySearch()
 	{ return this.doFwdDepsSearch().doRevDepsSearch(); }
+	
+	public Set<BlockVector> intersection(final DependingBlockSet rhs)
+	{
+		final Set<BlockVector> set = new LinkedHashSet<BlockVector>();
+		for(BlockVector v : this.blocks.keySet())
+		{	if(rhs.contains(v)) set.add(v); }
+		
+		return set;
+	}// intersection()
+	
+	public DependingBlockSet difference(final DependingBlockSet rhs)
+	{
+		final DependingBlockSet newSet = new DependingBlockSet(this);
+		for(BlockVector v : rhs.blocks.keySet())
+		{	if(this.contains(v)) newSet.blocks.remove(v); }
+		
+		return newSet;
+	}// difference()
+	
 }// DependingBlockSet

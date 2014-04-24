@@ -12,6 +12,7 @@ public class RestorationWarnings {
 	private long timer;
 	private Location location;
 	private Plugin plugin;
+	private int taskID = -1;
 	
 	private BukkitRunnable br = new BukkitRunnable() {
 		@Override
@@ -28,6 +29,7 @@ public class RestorationWarnings {
 		if(time < 10 )
 		{
 			//System.out.println("RESTORED!");
+			taskID = -2;
 			return;
 		}
 		//System.out.println("inside" + timer);
@@ -42,7 +44,8 @@ public class RestorationWarnings {
 		}
 		
 		l.getWorld().playEffect(l, Effect.MOBSPAWNER_FLAMES, 2004);
-		plugin.getServer().getScheduler().scheduleSyncDelayedTask(plugin,br, time);
+		taskID = plugin.getServer().getScheduler().scheduleSyncDelayedTask(plugin,br, time);
+		assert(taskID != -1);
 	}
 	
 	
@@ -57,6 +60,13 @@ public class RestorationWarnings {
 		this.runRunnable(this.timer, this.location);
 	}
 	
+	
+	public void cancel()
+	{
+		if(taskID >= 0)
+		{	plugin.getServer().getScheduler().cancelTask(taskID); }
+		taskID = -3;
+	}// cancel()
 
 }
 

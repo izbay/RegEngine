@@ -7,4 +7,4 @@
 /src/cljengine/*.bk*
 /src/cljengine/*~
 /src/cljengine/*.swp
-/lib
+

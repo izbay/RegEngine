@@ -1,0 +1,3 @@
+	The library cljminecraft.jar is a renamed, but unaltered, instance of the clj-minecraft plugin available at https://github.com/CmdrDats/clj-minecraft, under the Eclipse Public License, courtesy of D. Moolman.  As it is a Minecraft plugin, by placing it in the 'plugins' directory one may activate a Clojure REPL when the program loads, with all the benefits and responsibilities that accrue thereunto.  In particular, as of writing (April 2014) it looks not to have been maintained in six months, resulting in possible Minecraft or Bukkit incompatibilities.  I have noticed that it may leak memory, draining the server, if reloaded too many times.  Nothing undesirable should occur merely from linking to the library.
+
+	-JJ-S

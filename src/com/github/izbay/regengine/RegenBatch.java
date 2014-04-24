@@ -2,6 +2,8 @@
 package com.github.izbay.regengine;
 
 import java.util.*; // I get really sick of micromanaging these
+import net.minecraft.util.com.google.common.collect.Sets;
+
 import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.block.Block;
@@ -15,7 +17,7 @@ import com.github.izbay.regengine.block.*;
 import com.github.izbay.util.*;
 
 /**
- * @author J. Jakes-Schauer
+ * @author Dumaiu
  *
  */
 public class RegenBatch implements RegenBatchIface 
@@ -394,5 +396,75 @@ public class RegenBatch implements RegenBatchIface
 
 					return this;
 	}// queueBatchRestoration()		
+	
+	
+	public Set<BlockVector> intersection(final RegenBatch rhs)
+	{
+		return this.blocks.intersection(rhs.blocks);
+	}// intersection()
+	
+	public long getProjectedRestorationTime()
+	{	return delay + this.world.getFullTime(); }
+	
 
+	public LinkedList<RegenBatch> getPossiblyConflictingBatches()
+	{
+		final LinkedList<RegenBatch> batches = new LinkedList<RegenBatch>();
+		for(RegenBatch bat : RegenBatch.activeBatches(this.world))
+		{
+			if(this != bat 
+				&& bat.isRunning() 
+				&& this.getProjectedRestorationTime() >= bat.getProjectedRestorationTime())
+			{	batches.add(bat); }
+		}// for
+		
+		// Sort from high to low by finishing time:
+		Collections.sort(batches, new Comparator<RegenBatch>() 
+		{ 
+			public int compare(final RegenBatch b1, final RegenBatch b2) 
+			{ 
+				// To achieve the reverse order, swap the comparison signs:
+				if(b1.getProjectedRestorationTime() < b2.getProjectedRestorationTime())
+					return 1; 
+				else if (b1.getProjectedRestorationTime() == b2.getProjectedRestorationTime())
+					return 0;
+				else return -1;
+			}// compare()
+		});// sort
+		
+		return batches;
+	}// getPossiblyConflictingBatches()
+	
+	
+	public Map<RegenBatch,Set<BlockVector>> groupByConflicts(final Set<RegenBatch> set)
+	{
+		final LinkedList<RegenBatch> remainingBatches = getPossiblyConflictingBatches();
+		Set<BlockVector> remainingBlocks = new LinkedHashSet<BlockVector>(this.blocks.blocks.keySet());
+		final Map<RegenBatch,Set<BlockVector>> acc = new LinkedHashMap<RegenBatch, Set<BlockVector>>();
+		while(true)
+		{
+			if(remainingBlocks.isEmpty()) 
+			{	
+				assert(!acc.isEmpty());
+				return acc;
+			}// if
+			else if(remainingBatches.isEmpty()) 
+			{
+				assert(!acc.containsKey(this));
+				acc.put(this, remainingBlocks);
+				return acc;
+			}// elif
+			else // continue loop
+			{
+				final RegenBatch nextBat = remainingBatches.pop();
+				final Set<BlockVector> isec = Sets.intersection(remainingBlocks, nextBat.blocks.blocks.keySet());
+				remainingBlocks = Sets.difference(remainingBlocks, isec);
+				if(!isec.isEmpty())
+				{	acc.put(nextBat, isec); }// if
+			}// else
+			
+		}// while true
+	}// groupByConflicts()
+	
+	
 }// RegenBatch
