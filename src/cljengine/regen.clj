@@ -32,7 +32,8 @@
                      [tasks :exclude [map]]
               [block :exclude [map]]
               [events :exclude [map]]))
-  ;; Add some Enums...
+  (:import (java.util Map
+                      Set))
   (:import (org.reflections Reflections)
            (org.bukkit Bukkit
                        Material
@@ -59,9 +60,7 @@
            (org.bukkit.event.vehicle VehicleBlockCollisionEvent
                                      VehicleMoveEvent)
            (org.bukkit.util Vector
-                            BlockVector
-                            Set
-                            Map)
+                            BlockVector)
            (org.bukkit.plugin Plugin
                               RegisteredListener)
            (org.bukkit.plugin.java JavaPlugin) ; subtype of Plugin
@@ -83,19 +82,7 @@
                                          Ram
                                          Weapon
                                          WeaponEventObserver)
-           (com.github.izbay.util Util))
-  (:import (javax.xml.parsers DocumentBuilderFactory
-                              DocumentBuilder)
-           (javax.xml.transform Transformer
-                                TransformerFactory)
-           javax.xml.transform.dom.DOMSource ;
-           javax.xml.transform.stream.StreamResult
-           (org.w3c.dom Attr             ;
-                        Document;
-                        NodeList;
-                        Node;
-                        Element;
-                        Text)))
+           (com.github.izbay.util Util)) )
 
                                         ;(declare physics-blocking-handler, player-move-event-handler)
 
@@ -122,7 +109,8 @@
     (intersection s1 s2)))
 
 (defn get-projected-restoration-time [#^RegenBatch rb]
-  (+ (.delay rb) (get-full-time)))
+  #_(+ (.delay rb) (get-full-time))
+  (.getProjectedRestorationTime rb))
 
 (defn get-possibly-conflicting-batches [bat & {:keys [running-only]}]
   (let [finish-time (get-projected-restoration-time bat)]
@@ -185,6 +173,9 @@
 
 
                                         ;(defonce ^{:doc "Bound to the last PlayerMoveEvent listener registered to our plugin."} player-move-listener (atom nil))
+(def +regen-warning-effect+
+  "We'll try displaying this as a warning that a block is about to reappear:"
+  org.bukkit.Effect/MOBSPAWNER_FLAMES)
 
 (defn visual-warning-at [pos]
   "A warning to players that the block is about to be overwritten.  The 'nil' arg depends on the effect type."
@@ -197,7 +188,7 @@
 
 
 ;; Redstone ore: replace glowing with regular
-(do
+#_(do
   (defmethod-on-block-type restored? glowing-redstone-ore [block]
     (= (get-type (get-block-at block)) Material/REDSTONE_ORE))
 
@@ -236,7 +227,7 @@
 
 (declare regengine-event-handlers)
 
-(defn player-move-event-handler [^PlayerMoveEvent ev]
+#_(defn player-move-event-handler [^PlayerMoveEvent ev]
   "Block-regen PlayerMoveEvent handler: when a block is in queue, checks whether a player is moving in or out of the affected area... blah, blah."
   (try
 ;(debug-println "Move event noted.")
@@ -289,7 +280,7 @@ If *log-physics-events* is set to :record, this will also be stored into the *ph
 
 ;; TODO: Priority levels?
 ;; Gotcha: If you change either of the handler funcs, you may need to update this variable!
-(defonce regengine-event-handlers (atom {"block.block-physics" {:handler physics-blocking-handler
+#_(defonce regengine-event-handlers (atom {"block.block-physics" {:handler physics-blocking-handler
                                                             :listener nil
                                                             :priority :normal
                                                             :active false},
@@ -348,20 +339,10 @@ If *log-physics-events* is set to :record, this will also be stored into the *ph
 ;(declare instate-player-move-event-handler)
 (declare ensure-regengine-handlers)
 
-
-
-
-
-
-
-
-
-
-
-(defn find-failures []
+#_(defn find-failures []
   (remove #(restored? %) @latest-altered-region))
 
-(defn verify-altered-region []
+#_(defn verify-altered-region []
   (cond*
    ((every? #(restored? %) @latest-altered-region)
           (println "No failures!")
@@ -370,9 +351,15 @@ If *log-physics-events* is set to :record, this will also be stored into the *ph
           (find-failures) )))
 
 
+(defonce backed-up-regions (atom {}))
 
-;;;; PC Warning Subsystem
-;; id=warner, id=warning
+#_(defn backup-region [start end & [tag]]
+  (let [region (gen-region-vectors start end)
+        tag? (or tag (count @backed-up-regions))
+        tag (some #(when (not (contains? @backed-up-regions %)) %) (iterate inc tag?))]))
+
+
+
 
 
 

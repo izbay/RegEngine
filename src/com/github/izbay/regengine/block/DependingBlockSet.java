@@ -23,7 +23,7 @@ public class DependingBlockSet implements Iterable<DependingBlock>
 	}// ctor
 	
 	/**
-	 * Copy constructor:
+	 * Copy constructor.
 	 * @param rhs
 	 */
 	public DependingBlockSet(final DependingBlockSet rhs)
@@ -35,7 +35,7 @@ public class DependingBlockSet implements Iterable<DependingBlock>
 	}// ctor
 	
 	/**
-	 * Construct from an already-extant collection.
+	 * Construct from an already extant collection.
 	 * @param coll
 	 */
 	public DependingBlockSet(final Iterable<DependingBlock> coll)

@@ -4,22 +4,22 @@ version: 0.10
 main: com.github.izbay.regengine.RegEnginePlugin
 
 commands:
-  re.backup.region:
+  re.protect.region:
     description: Flag a region for regeneration in the case of incidental destruction.  If omitted, <tag> defaults to an index.
     usage: /re.protect.region <x_1> <y_1> <z_1> <x_2> <y_2> <z_2> [<tag>]
     permission: RegEngine.basic
     permission-message: You don't have <permission> 
-  re.backup.list:
+  re.protect.list:
     description: List regions added by re.protect.region.
     usage: /re.protect.list
     permission: RegEngine.basic
     permission-message: You don't have <permission> 
-  re.backup.restore:
+  re.protect.restore:
     description: Activate forced restoration.
     usage: /re.protect.restore <tag>
     permission: RegEngine.basic
     permission-message: You don't have <permission> 
-  re.backup.remove:
+  re.protect.remove:
     description: Remove by tag.
     usage: /re.protect.list <tag>
     permission: RegEngine.basic

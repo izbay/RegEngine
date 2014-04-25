@@ -1,7 +1,7 @@
 
 package com.github.izbay.regengine;
 
-import java.util.*; // I get really sick of micromanaging these
+import java.util.*; // I get sick of managing these individually
 import net.minecraft.util.com.google.common.collect.Sets;
 
 import org.bukkit.Material;
@@ -22,8 +22,8 @@ import com.github.izbay.util.*;
  */
 public class RegenBatch implements RegenBatchIface 
 {
-	public static enum Status { PENDING_ALTERATION, ALTERED_BUT_NOT_QUEUED, PENDING_RESTORATION, DONE, CANCELLED };
-	public static enum Type { DESTRUCTION, CREATION };
+	public enum Status { PENDING_ALTERATION, ALTERED_BUT_NOT_QUEUED, PENDING_RESTORATION, DONE, CANCELLED };
+	public enum Type { DESTRUCTION, CREATION, BACKUP };
 
 	protected final World world;
 	protected long queueTime = 0;
@@ -104,6 +104,19 @@ public class RegenBatch implements RegenBatchIface
 	public static RegenBatch destroying(final Plugin plugin, final World world, final Vector[] blockVectors, final long delay)
 	{	return destroying(plugin, world, Arrays.asList(blockVectors), delay); }
 	
+	
+	/**
+	 * Simple backup-and-restore facility.
+	 * @param plugin
+	 * @param world
+	 * @param blockVectors
+	 * @return
+	 */
+	public static RegenBatch storing(final Plugin plugin, final World world, final Iterable<Vector> blockVectors)
+	{
+		return new RegenBatch(plugin, world, blockVectors);
+	}// storing()
+	
 	public static RegenBatch altering(final Plugin plugin, final World w, final Iterable<Vector> blockVectors, final Material newMat, final long delay)
 	{
 		if(BlockTypes.isDestroyed(newMat))
@@ -148,6 +161,29 @@ public class RegenBatch implements RegenBatchIface
 	}// ctor
 	*/
 
+ // "Backup" constructor.
+	public RegenBatch(final Plugin plugin, final World world, final Iterable<Vector> blockVectors)
+	{
+		super();
+		this.batchType = Type.BACKUP;
+		this.plugin = plugin;
+		this.world = world;
+		this.newMaterial = Material.AIR; // 
+		this.delay = 0;
+				
+	// RegenBatch.ensureInBackupSet(this);
+		final DependingBlockSet sIn = new DependingBlockSet();
+		for(Vector v : blockVectors)
+		{
+			final Block b = Util.getBlockAt(v,world);
+			//if(b.getType() != newMaterial)
+				sIn.add(DependingBlock.from(b, Action.RESTORE)); 
+		}// for
+
+		this.blocks = sIn.doFullDependencySearch(); // The RESTORE designation means that this will be, effectively, a reverse dependency search.
+		this.status = Status.PENDING_ALTERATION;
+	}// backup ctor
+	
 	/**
 	 * Primary destruction constructor; for internal use.  Externally the factory methods are preffered.
 	 * @param plugin
@@ -155,7 +191,8 @@ public class RegenBatch implements RegenBatchIface
 	 * @param world
 	 * @param delay
 	 */
-	private RegenBatch(final Plugin plugin, final World world, final Iterable<Vector> blockVectors, final long delay) {
+	private RegenBatch(final Plugin plugin, final World world, final Iterable<Vector> blockVectors, final long delay) 
+	{
 		super();
 		
 		//		this.blocks = blocks;
@@ -208,31 +245,6 @@ public class RegenBatch implements RegenBatchIface
 		}// switch
 	}// cancel
 
-	/*	public DependingBlockSet doFwdDependencies()
-	{
-		Queue<DependingBlock>
-	}*/
-
-	/*
-	public void alter(Plugin plugin, Location l, Material m)
-	{
-		Location normal = Util.normalizeLocation(l);
-		Material backup = normal.getBlock().getType();
-		if(backup != m){
-			if(!blockMap.containsKey(normal)){
-				blockMap.put(normal, new SerializedBlock(normal.getBlock()));
-				BlockState state = normal.getBlock().getState();
-				if(state instanceof Chest){
-					((Chest)state).getBlockInventory().clear();
-				} else if(state instanceof InventoryHolder){
-					((InventoryHolder)state).getInventory().clear();
-				}
-				normal.getBlock().setType(m);
-				regen(normal);	
-			}
-		}
-	}
-	 */
 
 	/**
 	 * Wrapper that activates ('alters') and immediately schedules restoration of blocks.
@@ -300,6 +312,20 @@ public class RegenBatch implements RegenBatchIface
 		return this;
 	}// batchAlter()
 	
+	/*
+	public static 
+	
+	public static ensureInBackupSet(final RegenBatch bat)
+	{
+		if(!RegenBatch.backupBatches.containsKey(batch.world())) 
+        {	RegenBatch.backupBatches.put(batch.world(), new LinkedHashSet<RegenBatch>()); }// if
+		assert(RegenBatch.backupBatches.containsKey(batch.world()));
+
+		assert(!RegenBatch.backupBatches.get(batch.world).contains(batch));
+		assert(!RegenBatch.activeBatches.get(batch.world).contains(batch));
+	}
+	*/
+
 	public static void ensureInActiveSet(final RegenBatch batch)
 	{
 		if(!RegenBatch.activeBatches.containsKey(batch.world())) RegenBatch.activeBatches.put(batch.world(), new LinkedHashSet<RegenBatch>());
@@ -322,32 +348,30 @@ public class RegenBatch implements RegenBatchIface
 		assert(!activeBatches.get(batch.world).contains(batch));
 	}// removeFromActiveSet()
 
-	protected void disablePhysics()
+	/*protected void disablePhysics()
 	{	RegEnginePlugin.getInstance().disablePhysics(); }
 
 	protected void enablePhysics()
 	{	RegEnginePlugin.getInstance().enablePhysics(); }
+	*/
 
 	protected RegenBatch restore()
 	{
 		if(status != Status.PENDING_RESTORATION) throw new Error("Can only call RegenBatch.restore() on a batch 'PENDING_RESTORATION'.");
 
-		try
-		{
-			disablePhysics();
-			// TODO: Multiple loops, if necessary, to ensure proper replacement.
-			// TODO: Pop-to-item the blocks being replaced.
-			for(Iterator<SerializedBlock> i = this.blockOrder.iterator(); i.hasNext(); )
-				//		for(Map.Entry<Location,SerializedBlock> entry : blockMap.entrySet())
-			{
-				final SerializedBlock block = i.next();
-				block.place();
-			}// for
-		}// try
-		finally
-		{
-			enablePhysics();
-		}// finally
+		RegEnginePlugin.getInstance().doWithDisabledPhysics(
+				new Runnable() { public void run()
+					{
+						// TODO: Multiple loops, if necessary, to ensure proper replacement.
+						// TODO: Pop-to-item the blocks being replaced.
+						for(Iterator<SerializedBlock> i = blockOrder.iterator(); i.hasNext(); )
+							//		for(Map.Entry<Location,SerializedBlock> entry : blockMap.entrySet())
+						{
+							final SerializedBlock block = i.next();
+							block.place();
+						}// for
+					}// λ
+				});
 
 		// Mark the batch as 'done', including removing it from the global map:
 		this.status = Status.DONE;
@@ -367,41 +391,43 @@ public class RegenBatch implements RegenBatchIface
 		if(status != Status.ALTERED_BUT_NOT_QUEUED)
 		{	throw new Error("Can only call RegenBatch.queueBatchRestoration() with an 'ALTERED' status.  Did you run .batchAlter() first?"); }// if
 
-		this.queueTime = world.getFullTime();
-		
-		plugin.getServer().getScheduler().scheduleSyncDelayedTask(plugin, new Runnable() {
-			public void run() 
-			{
-				restore();
-			}// λ
-		}, this.delay);
-
-		// Enable warnings if applicable:
-		if(RegEnginePlugin.getInstance().doParticles)// TODO: Do we want to switch off all warnings if only 'doParticles' is false?
+		// If it's supposed to occur "instantly", don't delay restoration atall.
+		if(delay > 0)
 		{
-			for(Map.Entry<BlockVector,DependingBlock> entry : this.blocks.blocks.entrySet())
-			{
-				// Start the warning system iff the block is of a material unhealthy to inhabit:
-				if(BlockTypes.needsWarnPlayerOnRegeneration(entry.getValue().block.getType()))
+			this.queueTime = world.getFullTime();
+
+			plugin.getServer().getScheduler().scheduleSyncDelayedTask(plugin, new Runnable() { public void run() 
 				{
-					final RestorationWarnings w = new RestorationWarnings(this.delay, Util.getLocation(entry.getKey(), world), this.plugin);
-					w.start();
-					warner.add(w);
-				}// if
-			}// for
+					restore();
+				}// λ
+			}, this.delay);
+
+			// Enable warnings if applicable:
+			if(RegEnginePlugin.getInstance().sendRegenPlayerWarnings)
+			{
+				for(Map.Entry<BlockVector,DependingBlock> entry : this.blocks.blocks.entrySet())
+				{
+					// Start the warning system iff the block is of a material unhealthy to inhabit:
+					if(BlockTypes.needsWarnPlayerOnRegeneration(entry.getValue().block.getType()))
+					{
+						final RestorationWarnings w = new RestorationWarnings(this.delay, Util.getLocation(entry.getKey(), world), this.plugin);
+						w.start();
+						warner.add(w);
+					}// if
+				}// for
+			}// if
+
+			this.status = Status.PENDING_RESTORATION;
+			assert(this.isRunning());
 		}// if
+		else restore(); // immediately
 
-		this.status = Status.PENDING_RESTORATION;
-					assert(this.isRunning());
-
-					return this;
+		return this;
 	}// queueBatchRestoration()		
-	
+
 	
 	public Set<BlockVector> intersection(final RegenBatch rhs)
-	{
-		return this.blocks.intersection(rhs.blocks);
-	}// intersection()
+	{ return this.blocks.intersection(rhs.blocks); }// intersection()
 	
 	public long getProjectedRestorationTime()
 	{	return delay + this.world.getFullTime(); }

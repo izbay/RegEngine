@@ -5,11 +5,17 @@
  */
 package com.github.izbay.regengine;
 
+import java.util.List;
+
+import org.bukkit.Chunk;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockState;
+import org.bukkit.material.MaterialData;
+import org.bukkit.metadata.MetadataValue;
+import org.bukkit.plugin.Plugin;
 import org.bukkit.util.BlockVector;
 
 /**
@@ -26,7 +32,7 @@ import org.bukkit.util.BlockVector;
  * @author jdjs
  *
  */
-public class BlockImage 
+public class BlockImage implements BlockState /* TODO This may not go so smoothly if I modify BlockImage to use SerializedBlock. */
 {
 	/**
 	 * 
@@ -51,10 +57,20 @@ public class BlockImage
 	public BlockImage(final BlockState bs /*, final int regenTime*/) {
 		super();
 		stateImage = bs;
-		blockLoc = bs.getLocation();
+		blockLoc = bs.getLocation().clone();
 		//restorationTargetTime = regenTime;
 		//assert(regenTime >= blockLoc.getWorld().getFullTime());
 	}// ctor
+
+	/**
+	 * Copy constructor (shallow copy of BlockState, which cannot easily be cloned).
+	 * @param b
+	 */
+	public BlockImage(final BlockImage b) {
+		super();
+		stateImage = b.stateImage;
+		blockLoc = b.getLocation().clone();
+	}// Copy c.
 
 	/**
 	 * @return the Location
@@ -102,4 +118,187 @@ public class BlockImage
 	{	return new BlockVector(blockLoc.getBlockX(), blockLoc.getBlockY(), blockLoc.getBlockZ()); }
 	
 	public World getWorld() { return blockLoc.getWorld(); }
+
+	/**
+	 * @param metadataKey
+	 * @param newMetadataValue
+	 * @see org.bukkit.metadata.Metadatable#setMetadata(java.lang.String, org.bukkit.metadata.MetadataValue)
+	 */
+	public void setMetadata(String metadataKey, MetadataValue newMetadataValue) {
+		stateImage.setMetadata(metadataKey, newMetadataValue);
+	}
+
+	/**
+	 * @param metadataKey
+	 * @return
+	 * @see org.bukkit.metadata.Metadatable#getMetadata(java.lang.String)
+	 */
+	public List<MetadataValue> getMetadata(String metadataKey) {
+		return stateImage.getMetadata(metadataKey);
+	}
+
+	/**
+	 * @return
+	 * @see org.bukkit.block.BlockState#getBlock()
+	 */
+	public Block getBlock() {
+		return stateImage.getBlock();
+	}
+
+	/**
+	 * @return
+	 * @see org.bukkit.block.BlockState#getData()
+	 */
+	public MaterialData getData() {
+		return stateImage.getData();
+	}
+
+	/**
+	 * @param metadataKey
+	 * @return
+	 * @see org.bukkit.metadata.Metadatable#hasMetadata(java.lang.String)
+	 */
+	public boolean hasMetadata(String metadataKey) {
+		return stateImage.hasMetadata(metadataKey);
+	}
+
+	/**
+	 * @return
+	 * @deprecated
+	 * @see org.bukkit.block.BlockState#getTypeId()
+	 */
+	public int getTypeId() {
+		return stateImage.getTypeId();
+	}
+
+	/**
+	 * @return
+	 * @see org.bukkit.block.BlockState#getLightLevel()
+	 */
+	public byte getLightLevel() {
+		return stateImage.getLightLevel();
+	}
+
+	/**
+	 * @param metadataKey
+	 * @param owningPlugin
+	 * @see org.bukkit.metadata.Metadatable#removeMetadata(java.lang.String, org.bukkit.plugin.Plugin)
+	 */
+	public void removeMetadata(String metadataKey, Plugin owningPlugin) {
+		stateImage.removeMetadata(metadataKey, owningPlugin);
+	}
+
+	/**
+	 * @return
+	 * @see org.bukkit.block.BlockState#getX()
+	 */
+	public int getX() {
+		return stateImage.getX();
+	}
+
+	/**
+	 * @return
+	 * @see org.bukkit.block.BlockState#getY()
+	 */
+	public int getY() {
+		return stateImage.getY();
+	}
+
+	/**
+	 * @return
+	 * @see org.bukkit.block.BlockState#getZ()
+	 */
+	public int getZ() {
+		return stateImage.getZ();
+	}
+
+	/**
+	 * @param loc
+	 * @return
+	 * @see org.bukkit.block.BlockState#getLocation(org.bukkit.Location)
+	 */
+	public Location getLocation(Location loc) {
+		return stateImage.getLocation(loc);
+	}
+
+	/**
+	 * @return
+	 * @see org.bukkit.block.BlockState#getChunk()
+	 */
+	public Chunk getChunk() {
+		return stateImage.getChunk();
+	}
+
+	/**
+	 * @param data
+	 * @see org.bukkit.block.BlockState#setData(org.bukkit.material.MaterialData)
+	 */
+	public void setData(MaterialData data) {
+		stateImage.setData(data);
+	}
+
+	/**
+	 * @param type
+	 * @see org.bukkit.block.BlockState#setType(org.bukkit.Material)
+	 */
+	public void setType(Material type) {
+		stateImage.setType(type);
+	}
+
+	/**
+	 * @param type
+	 * @return
+	 * @deprecated
+	 * @see org.bukkit.block.BlockState#setTypeId(int)
+	 */
+	public boolean setTypeId(int type) {
+		return stateImage.setTypeId(type);
+	}
+
+	/**
+	 * @return
+	 * @see org.bukkit.block.BlockState#update()
+	 */
+	public boolean update() {
+		return stateImage.update();
+	}
+
+	/**
+	 * @param force
+	 * @return
+	 * @see org.bukkit.block.BlockState#update(boolean)
+	 */
+	public boolean update(boolean force) {
+		return stateImage.update(force);
+	}
+
+	/**
+	 * @param force
+	 * @param applyPhysics
+	 * @return
+	 * @see org.bukkit.block.BlockState#update(boolean, boolean)
+	 */
+	public boolean update(boolean force, boolean applyPhysics) {
+		return stateImage.update(force, applyPhysics);
+	}
+
+	/**
+	 * @return
+	 * @deprecated
+	 * @see org.bukkit.block.BlockState#getRawData()
+	 */
+	public byte getRawData() {
+		return stateImage.getRawData();
+	}
+
+	/**
+	 * @param data
+	 * @deprecated
+	 * @see org.bukkit.block.BlockState#setRawData(byte)
+	 */
+	public void setRawData(byte data) {
+		stateImage.setRawData(data);
+	}
+	
+	
 }// BlockImage

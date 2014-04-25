@@ -87,11 +87,27 @@
 (def DESTROY Action/DESTROY)
 (def RESTORE Action/RESTORE)
 
-(defn depending-block [block & {:keys [action] :or {action Action/DESTROY}}]
-  (DependingBlock/from block action))
+(do
+  (defmulti depending-block (fn [o & _] (class o)))
+  (defmethod depending-block Vector [v & {:keys [action] :or {action Action/DESTROY}}]
+    (DependingBlock/from (get-block-at v) action))
+  (defmethod depending-block :cljengine.mc/block-state-image [block & {:keys [action] :or {action Action/DESTROY}}]
+    (DependingBlock/from (get-block-at block) action))
+  (defmethod depending-block BlockImage [block & {:keys [action] :or {action Action/DESTROY}}]
+       (DependingBlock/from block action)))
 
-(defn depending-block-set [block & {:keys [action] :or {action Action/DESTROY} :as rest} ]
-  (DependingBlockSet. (apply depending-block block rest)))
+(do
+  (defmulti depending-block-set (fn [o & _] (class o)))
+  #_(defmethod depending-block-set Iterable [blocks & {:keys [action] :or {action Action/DESTROY} :as rest} ]
+    (DependingBlockSet. (map #(apply depending-block % rest) blocks)))
+  (defmethod depending-block-set Iterable [blocks & {:keys [action] :or {action Action/DESTROY} :as rest}]
+;; TODO: Why can't I use a 'rest' deployment?
+    (let [dep-blocks (the Iterable (map #(depending-block % :action action) blocks))]
+      (DependingBlockSet. dep-blocks)))
+  (defmethod depending-block-set :default [block & {:keys [action] :or {action Action/DESTROY} :as rest} ]
+    (debug-println-2 "Default method in (depending-block-set).")
+    (DependingBlockSet. (the DependingBlock (apply depending-block (the Block (get-block-at block)) rest)))))
+
 (do
   (defmulti all-rev-deps class)
   (defmethod all-rev-deps DependingBlock [b]
@@ -101,38 +117,6 @@
 
 (declare deps)
 
-(do
-  (defmulti proxy-rev-dependency class)
-  (defmethod proxy-rev-dependency Block [b]
-    (proxy-rev-dependency (depending-block b)))
-  (defmethod proxy-rev-dependency DependingBlock [b]
-    (proxy-rev-dependency (DependingBlockSet. b)))
-  (defmethod proxy-rev-dependency DependingBlockSet [ds]
-    (let [sOut (DependingBlockSet. ds)
-          sSearch (DependingBlockSet. ds)]
-      (with-local-vars [c 0]
-        (while (not (.isEmpty sSearch))
-          (var-set c (+ @c 1))
-          (when (> @c 20) (throw (Error. "Too many iterations!")))
-          (let [b (first (.. sSearch blocks values))]
-            (.. sSearch blocks (remove (.coord b)))
-            (assert* (not (. (. sSearch blocks) containsKey (.coord b))))
-            (let [sD (all-rev-deps b)]
-              (doseq [entry (.. sD blocks entrySet)]
-                                        ;            (assert* (not (.. entry getValue action isHardDependency)))
-                (if (not (.contains sOut (the BlockVector (. entry getKey))))
-                  (do
-                    (debug-println entry (deps (. entry getValue)))
-                    (. sSearch add (. entry getValue))
-;                    (. (. sSearch blocks) put (. entry getKey) (. entry getValue))
-                    (when (not (. sOut contains (the BlockVector (. entry getKey))))
-                      (. sOut add (. entry getValue))
-                      ;(. (. sOut blocks) put (. entry getKey) (. entry getValue))
-                      (assert* (. sOut contains (the BlockVector (. entry getKey))))))
-                  (do
-                                        ;(assert* (not (. sOut contains (. entry getKey))))
-                    )))))))
-      sOut)))
 
 
 (def vine-fwd-dependency (memfn vineFwdDependency))
@@ -1018,8 +1002,15 @@ Operators:
 
 
 ;;;; id=blink
-
-(defn blink [pos & {:keys [seconds] :or {seconds 10}}]
-  (let [blinker (repeated-task *plugin* #(effect (.toLocation (get-vector pos) (get-current-world)) org.bukkit.Effect/MOBSPAWNER_FLAMES nil)
-                               0 20)]
-    (delayed-task *plugin* #(cancel-task blinker) (seconds-to-ticks seconds))))
+(do
+  (defmulti blink (fn [o & _] (class o)))
+  (defmethod blink Iterable [coll & {:keys [seconds] :or {seconds 10}}]
+    (let [blinker (repeated-task *plugin*
+                                 #(doseq [block coll]
+                                    (effect (.toLocation (get-block-vector block) (get-current-world)) org.bukkit.Effect/MOBSPAWNER_FLAMES nil))
+                                 0 20)]
+      (delayed-task *plugin* #(cancel-task blinker) (seconds-to-ticks seconds))) )
+  (defmethod blink :default [pos & {:keys [seconds] :or {seconds 10}}]
+     (let [blinker (repeated-task *plugin* #(effect (.toLocation (get-block-vector pos) (get-current-world)) org.bukkit.Effect/MOBSPAWNER_FLAMES nil)
+                                  0 20)]
+       (delayed-task *plugin* #(cancel-task blinker) (seconds-to-ticks seconds)))))

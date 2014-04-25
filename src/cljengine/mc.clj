@@ -1,6 +1,8 @@
 ; -*- eval: (clojure-mode); eval: (paredit-mode); eval: (viper-mode) -*-
 ;;;; Load this first of the Minecraft Clojure files.
 
+(comment
+  ())
 
 (ns cljengine.mc
   "Testing Clojure in Minecraft."
@@ -437,6 +439,9 @@ TODO: A more specific exception type."
    [:else (throw
            (new RuntimeException (format "(get-vector) failed on unsupported type %s." (type obj))))]))
 
+(defn coordinates [obj]
+  (when-let [v (get-vector obj)]
+    [(.getX v) (.getY v) (.getZ v)]))
 
 
 #_(defn ^BlockVector get-block-vector [obj]
@@ -457,6 +462,11 @@ Always returns a fresh vector."
     (.clone vec))
   (defmethod get-block-vector Vector [vec]
     (.toBlockVector vec))
+  (defmethod get-block-vector clojure.lang.PersistentVector [vec]
+    (let [[x y z] vec]
+      (new BlockVector (Math/floor x) (Math/floor y) (Math/floor z))))
+  (defmethod get-block-vector DependingBlock [block]
+    (get-block-vector (.block block)))
   (defmethod get-block-vector Location [loc]
     (BlockVector. (long (.getBlockX loc))
                     (long (.getBlockY loc))

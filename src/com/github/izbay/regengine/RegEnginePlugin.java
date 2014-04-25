@@ -2,11 +2,14 @@ package com.github.izbay.regengine;
 
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.concurrent.Callable;
+
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.BlockState;
 import org.bukkit.block.Chest;
 import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.event.HandlerList;
 import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -25,7 +28,7 @@ public class RegEnginePlugin extends JavaPlugin
 		private FileConfiguration config;
 //		@SuppressWarnings("unused")
 		private EventObserver eventobs = null;
-		private static boolean active = true;
+		private boolean active = true;
 		/**
 		 * Config-file keystrings, because I amuse myself idly by turning things like these into constants.
 		 * Might be better as an enum.  This kind of design pattern gets so wearisome.
@@ -37,12 +40,14 @@ public class RegEnginePlugin extends JavaPlugin
 			public static final String CHECK_UPDATE = "check-update";
 			public static final String DO_PARTICLES = "do-particles";
 			public static final String USE_CLOJURE_REGEN = "use-clojure-regen";
+			public static final String SEND_REGEN_PLAYER_WARNINGS = "send-regen-player-warnings";
 		}// Config
 		
 		// TODO: Later we can go back to private if we want.  Having them public makes them more Clojure-accessible:
-		public /*private*/ Boolean doParticles; 
-		public Boolean clojureRegen;
-		
+		public /*private*/ boolean doParticles; 
+		public boolean clojureRegen;
+		public boolean sendRegenPlayerWarnings;
+
 		private static RegEnginePlugin instance; // Singleton-design pattern-related.
 		/**
 		 * @return the RegEnginePlugin singleton
@@ -60,11 +65,22 @@ public class RegEnginePlugin extends JavaPlugin
 		{
 			super();
 			instance = this;
+			active = false;
 		}// ctor
+		
+		/**
+		 * Deallocate resources; called onDisable.
+		 */
+		protected void cleanup()
+		{
+			active = false;
+			if (eventobs != null)
+			{	HandlerList.unregisterAll(eventobs); }// if
+		}// cleanup()
 		
 		@Override
 		public void onDisable() {
-			active = false;
+			cleanup();
 			/*LinkedList<SerializedBlock> writeOut = new LinkedList<SerializedBlock>();
 			for(LinkedHashSet<RegenBatch> batchList: RegenBatch.activeBatches().values()){
 				for(RegenBatch batch: batchList){
@@ -99,25 +115,32 @@ public class RegEnginePlugin extends JavaPlugin
 		@Override
 		//enable the plugin
 		public void onEnable() {
-			// Load config
-			this.saveDefaultConfig();
-			config = this.getConfig();
-			eventobs = new EventObserver(this);
-			
-			// If configured to do so, check the latest version on BukkitDEV and
-			// alert if user is out of date.
-			if (this.config.getBoolean(Config.CHECK_UPDATE)) {
-			      //new CheckUpdate(this, <INSERT ID HERE>);
-			}
-			doParticles = this.config.getBoolean(Config.DO_PARTICLES);
-			clojureRegen = this.config.getBoolean(Config.USE_CLOJURE_REGEN);
-			active = true;
+			try
+			{
+				active = true;
+				// Load config
+				this.saveDefaultConfig();
+				config = this.getConfig();
+				eventobs = new EventObserver(this);
 
-			// Load Clojure REGENgine support:
-			if (clojureRegen) {	loadClojure(); }// if
+				// If configured to do so, check the latest version on BukkitDEV and
+				// alert if user is out of date.
+				if (this.config.getBoolean(Config.CHECK_UPDATE)) {
+					//new CheckUpdate(this, <INSERT ID HERE>);
+				}
+				doParticles = this.config.getBoolean(Config.DO_PARTICLES);
+				clojureRegen = this.config.getBoolean(Config.USE_CLOJURE_REGEN);
+				sendRegenPlayerWarnings = this.config.getBoolean(Config.SEND_REGEN_PLAYER_WARNINGS);
+
+				// Load Clojure REGENgine support:
+				if (clojureRegen) {	loadClojure(); }// if
+			} catch(Exception e) {
+				cleanup();
+				throw e;
+			}// catch
 		}// onEnable()
 		
-		//disable world physics
+		//disable world physics (temporarily)
 		public void disablePhysics()
 		{
 			assert(this.eventobs != null);
@@ -132,6 +155,35 @@ public class RegEnginePlugin extends JavaPlugin
 			eventobs.setPhysics(true);
 		}// enablePhysics()
 		
+		
+		/**
+		 * Executes /callback/, presumably for side-effects, with BlockPhysicsEvents temporarily disabled via the RegEnginePlugin's event listener.
+		 * @param callback
+		 */
+		public void doWithDisabledPhysics(final Runnable callback)
+		{
+			try
+			{
+				disablePhysics();
+				callback.run();
+			} finally {
+				enablePhysics();
+			}// finally
+		}// doWithDisabledPhysics()
+
+		public <T>
+		T doWithDisabledPhysics(final Callable<T> callback) throws Exception
+		{
+			try
+			{
+				disablePhysics();
+				final T retval = callback.call();
+				return retval;
+			} finally {
+				enablePhysics();
+			}// finally
+		}// doWithDisabledPhysics()
+	
 /*
 		@SuppressWarnings("deprecation")
 		public void alter(Location l, Material m){
@@ -168,9 +220,6 @@ public class RegEnginePlugin extends JavaPlugin
 			Material backup = normal.getBlock().getType();
 			if(backup != m){
 				if(!blockMap.containsKey(normal)){
-					
-					// turns physics off
-					//eventobs.setPhysics(false);
 					
 					blockMap.put(normal, new SerializedBlock(normal.getBlock()));
 					BlockState state = normal.getBlock().getState();

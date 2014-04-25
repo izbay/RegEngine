@@ -362,7 +362,7 @@ If *log-physics-events* is set to :record, this will also be stored into the *ph
   ([^String eventname]
      (assert* *plugin*)
      (let [class (resolve (symbol (package-classname "org.bukkit.event" (str eventname "-event"))))]
-       (eval `(.unregister (. ~class (getHandlerList)) *plugin*)); workaround for not being able to use a dynamically-resolved Class name to invoke a static method.
+       (eval `(.unregister (. ~class (getHandlerList)) *plugin*)); workaround for not being able to use a dynamically-resolved Class name to invoke a static method.  Note: There may be a Java reflection alternative.
        (debug-println (format "Unregistered %s for our plugin." eventname))
        true))
   ([]

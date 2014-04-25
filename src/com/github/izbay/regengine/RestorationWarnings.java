@@ -8,7 +8,8 @@ import org.bukkit.plugin.Plugin;
 import org.bukkit.scheduler.BukkitRunnable;
 
 public class RestorationWarnings {
-	
+// TODO: Enum in preference to -1, -2, -3 as state values.	public enum WarningState { UNINITIALIZED }; 
+		
 	private long timer;
 	private Location location;
 	private Plugin plugin;
@@ -24,10 +25,8 @@ public class RestorationWarnings {
 	
 	
 	
-	private void runRunnable(long time, final Location l)
-	{
-		if(time < 10 )
-		{
+	private void runRunnable(long time, final Location l) {
+		if(time < 10 ) {
 			//System.out.println("RESTORED!");
 			taskID = -2;
 			return;
@@ -55,14 +54,12 @@ public class RestorationWarnings {
 		this.plugin = plugin;
 	}
 	
-	public void start()
-	{
+	public void start() {
 		this.runRunnable(this.timer, this.location);
 	}
 	
 	
-	public void cancel()
-	{
+	public void cancel() {
 		if(taskID >= 0)
 		{	plugin.getServer().getScheduler().cancelTask(taskID); }
 		taskID = -3;

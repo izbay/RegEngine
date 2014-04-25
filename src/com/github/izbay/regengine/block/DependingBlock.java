@@ -24,8 +24,29 @@ public class DependingBlock {
 		protected /*final*/ Action action;
 		//public final BlockVector coord;
 
+		public static DependingBlock from(final Block b, final Action act)
+		{	return DependingBlock.from(new BlockImage(b), act);	}
+
+/*		public static DependingBlock from(final Block b)
+		{	return DependingBlock.from(new BlockImage(b));	}
+		*/
+
+		public static DependingBlock from(final BlockState b, final Action act)
+		{	return DependingBlock.from(new BlockImage(b), act);	}
+
+/*		public static DependingBlock from(final BlockImage b)
+		{	return DependingBlock.from(b, Action.DESTROY);	}
+		*/
+/*		public static DependingBlock from(final BlockState b)
+		{	return DependingBlock.from(new BlockImage(b));	}
+		*/
+
+/*		public static DependingBlock from(final BlockImage b)
+		{	return DependingBlock.from(b, Action.DESTROY);	}
+		*/
+
 		/**
-		 * Protected because the static factory meth DependingBlock.from() should be chosen instead in most cases.
+		 * Constructor.  But: protected because the static factory meth DependingBlock.from() should be chosen instead in most cases.
 		 * @param block
 		 * @param action
 		 */
@@ -79,24 +100,6 @@ public class DependingBlock {
 
 		}// 
 */	
-
-		public static DependingBlock from(final Block b, final Action act)
-		{	return DependingBlock.from(new BlockImage(b), act);	}
-
-/*		public static DependingBlock from(final Block b)
-		{	return DependingBlock.from(new BlockImage(b));	}
-		*/
-
-		public static DependingBlock from(final BlockState b, final Action act)
-		{	return DependingBlock.from(new BlockImage(b), act);	}
-
-/*		public static DependingBlock from(final BlockState b)
-		{	return DependingBlock.from(new BlockImage(b));	}
-		*/
-
-/*		public static DependingBlock from(final BlockImage b)
-		{	return DependingBlock.from(b, Action.DESTROY);	}
-		*/
 
 		/**
 		 * Factory method.
