@@ -115,6 +115,16 @@
   (defmethod all-rev-deps Block [b]
     (.allRevDependencies (depending-block b))))
 
+
+(do
+  (defmulti regen-batch-store class)
+  (defmethod regen-batch-store :cljengine.mc/block-state-image [obj]
+    (regen-batch-store [(get-block-vector obj)]))
+  (defmethod regen-batch-store DependingBlock [obj]
+    (regen-batch-store [(get-block-vector obj)]))
+  (defmethod regen-batch-store Iterable [coll]
+    (RegenBatch/storing *plugin* (get-current-world) coll)))
+
 (declare deps)
 
 
@@ -146,7 +156,7 @@
     (.doFullDependencySearch (depending-block-set b)))
   #_(defmethod do-full-deps-search ))
 
-(defn proxy-do-full-deps-search [dbs]
+#_(defn proxy-do-full-deps-search [dbs]
   (proxy-rev-dependency (do-fwd-deps-search dbs))
   ;(do-fwd-deps-search (proxy-rev-dependency))
   )
@@ -1010,7 +1020,9 @@ Operators:
                                     (effect (.toLocation (get-block-vector block) (get-current-world)) org.bukkit.Effect/MOBSPAWNER_FLAMES nil))
                                  0 20)]
       (delayed-task *plugin* #(cancel-task blinker) (seconds-to-ticks seconds))) )
+  (defmethod blink RegenBatch [bat & {:keys [seconds] :or {seconds 10}}]
+    (blink (.blocks bat)))
   (defmethod blink :default [pos & {:keys [seconds] :or {seconds 10}}]
-     (let [blinker (repeated-task *plugin* #(effect (.toLocation (get-block-vector pos) (get-current-world)) org.bukkit.Effect/MOBSPAWNER_FLAMES nil)
-                                  0 20)]
-       (delayed-task *plugin* #(cancel-task blinker) (seconds-to-ticks seconds)))))
+    (let [blinker (repeated-task *plugin* #(effect (.toLocation (get-block-vector pos) (get-current-world)) org.bukkit.Effect/MOBSPAWNER_FLAMES nil)
+                                 0 20)]
+      (delayed-task *plugin* #(cancel-task blinker) (seconds-to-ticks seconds)))))

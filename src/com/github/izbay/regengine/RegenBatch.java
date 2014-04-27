@@ -2,6 +2,7 @@
 package com.github.izbay.regengine;
 
 import java.util.*; // I get sick of managing these individually
+
 import net.minecraft.util.com.google.common.collect.Sets;
 
 import org.bukkit.Material;
@@ -114,7 +115,7 @@ public class RegenBatch implements RegenBatchIface
 	 */
 	public static RegenBatch storing(final Plugin plugin, final World world, final Iterable<Vector> blockVectors)
 	{
-		return new RegenBatch(plugin, world, blockVectors);
+		return new BackupRegenBatch(plugin, world, blockVectors);
 	}// storing()
 	
 	public static RegenBatch altering(final Plugin plugin, final World w, final Iterable<Vector> blockVectors, final Material newMat, final long delay)
@@ -161,8 +162,8 @@ public class RegenBatch implements RegenBatchIface
 	}// ctor
 	*/
 
- // "Backup" constructor.
-	public RegenBatch(final Plugin plugin, final World world, final Iterable<Vector> blockVectors)
+ // "Backup" constructor.  Called by subclass BackupRegenBatch.
+	protected RegenBatch(final Plugin plugin, final World world, final Iterable<Vector> blockVectors)
 	{
 		super();
 		this.batchType = Type.BACKUP;
@@ -176,12 +177,12 @@ public class RegenBatch implements RegenBatchIface
 		for(Vector v : blockVectors)
 		{
 			final Block b = Util.getBlockAt(v,world);
-			//if(b.getType() != newMaterial)
 				sIn.add(DependingBlock.from(b, Action.RESTORE)); 
 		}// for
 
 		this.blocks = sIn.doFullDependencySearch(); // The RESTORE designation means that this will be, effectively, a reverse dependency search.
-		this.status = Status.PENDING_ALTERATION;
+//		this.status = Status.PENDING_ALTERATION;
+		this.status = Status.PENDING_RESTORATION;
 	}// backup ctor
 	
 	/**
@@ -462,7 +463,7 @@ public class RegenBatch implements RegenBatchIface
 	}// getPossiblyConflictingBatches()
 	
 	
-	public Map<RegenBatch,Set<BlockVector>> groupByConflicts(final Set<RegenBatch> set)
+	public Map<RegenBatch, Set<BlockVector>> groupByConflicts(final Set<RegenBatch> set)
 	{
 		final LinkedList<RegenBatch> remainingBatches = getPossiblyConflictingBatches();
 		Set<BlockVector> remainingBlocks = new LinkedHashSet<BlockVector>(this.blocks.blocks.keySet());
@@ -491,6 +492,37 @@ public class RegenBatch implements RegenBatchIface
 			
 		}// while true
 	}// groupByConflicts()
+
+	/**
+	 * @param key
+	 * @return
+	 * @see com.github.izbay.regengine.block.DependingBlockSet#get(org.bukkit.util.BlockVector)
+	 */
+	public DependingBlock get(final BlockVector key) {
+		return blocks.get(key);
+	}
+	/**
+	 * @return
+	 * @see com.github.izbay.regengine.block.DependingBlockSet#isEmpty()
+	 */
+	public boolean isEmpty() {
+		return blocks.isEmpty();
+	}
+	/**
+	 * @return
+	 * @see com.github.izbay.regengine.block.DependingBlockSet#size()
+	 */
+	public int size() {
+		return blocks.size();
+	}
+	/**
+	 * @param rhs
+	 * @return
+	 * @see com.github.izbay.regengine.block.DependingBlockSet#intersection(com.github.izbay.regengine.block.DependingBlockSet)
+	 */
+	public Set<BlockVector> intersection(final DependingBlockSet rhs) {
+		return blocks.intersection(rhs);
+	}
 	
 	
 }// RegenBatch
