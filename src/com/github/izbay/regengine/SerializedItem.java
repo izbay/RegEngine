@@ -1,8 +1,8 @@
 package com.github.izbay.regengine;
 
 import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
+
+
 
 import org.bukkit.Material;
 import org.bukkit.enchantments.Enchantment;
@@ -63,15 +63,17 @@ public class SerializedItem {
 		    
 		    //Enchantment Info
             if(itemmeta.hasEnchants()){
-                //I'm surprised that this doesn't need to be cast as an (Enchantment[])
-                Enchantment[] enchantObjects = ((Enchantment[]) I.getItemMeta().getEnchants().keySet().toArray());
 
-                this.enchant = new String[enchantObjects.length - 1];
+                Object[] enchantList = I.getItemMeta().getEnchants().keySet().toArray();
+
+                this.enchant = new String[enchantList.length];
                 int i=0;
-                for(Enchantment e: enchantObjects){
-                    this.enchant[i++] = e.getName();
+                for(Object o: enchantList){
+
+                    this.enchant[i++] = ((Enchantment)o).getName();
                 }
-                this.enchantLevels = ((Integer[])I.getItemMeta().getEnchants().values().toArray());
+                Object[] eLvlList = I.getItemMeta().getEnchants().values().toArray();
+                this.enchantLevels = Arrays.copyOf(eLvlList, eLvlList.length, Integer[].class);
                 
             }//end IF enchanted
 		}//end IF hasMeta
@@ -100,15 +102,19 @@ public class SerializedItem {
 	        ((BookMeta)meta).setTitle(title);
 	        ((BookMeta)meta).setPages(Arrays.asList(pages));
 	    }
-	    if(enchant != null){
-	    	Map<Enchantment, Integer> map = new HashMap<Enchantment, Integer>();
 	    
+	    item.setItemMeta(meta);
+	    
+	    if(enchant != null){
+
+
 	    	for(int i=0; i<enchant.length; i++){
-	    		map.put(Enchantment.getByName(enchant[i]), enchantLevels[i]);     
+	    		item.addEnchantment(Enchantment.getByName(enchant[i]), enchantLevels[i]);     
 	    	}
-	    	meta.getEnchants().putAll(map);
+
 	    }
-        item.setItemMeta(meta);
+	    
+
         return item;
     }
 	
