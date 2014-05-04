@@ -1,4 +1,4 @@
-package com.github.izbay.regengine;
+package com.github.izbay.regengine.serialize;
 
 import java.util.Arrays;
 

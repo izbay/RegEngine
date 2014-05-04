@@ -61,7 +61,8 @@
                                   ClojurePlugin)
                     (org.bukkit.util BlockIterator)
                     )
-  (:import (com.github.izbay.regengine RegEnginePlugin
+  ;; Moving to re.clj:
+  #_(:import (com.github.izbay.regengine RegEnginePlugin
                                        BlockImage
                                        RegenBatch)
            (com.github.izbay.regengine.block Action
@@ -86,21 +87,44 @@
 
 
 ;;;; id=TYPES
-;;; id=::block-state-image, id=block-state-image
+;;; id=::block-state-image, id=block-state-image, id=derive
+
+;;; id=Protocols
+#_(defprotocol BukkitLocatable
+  "Implements a get-location func."
+  (get-location [obj]))
+
+#_(derive BukkitLocatable ::bukkit-locatable)
+
+;(derive ::block-state-image ::block)
+#_(do
+  (derive Block ::bukkit-locatable)
+  (derive BlockState ::bukkit-locatable))
+
+(derive ::block-state-image ::bukkit-locatable)
+
 (do
   (derive Block ::block-state-image)
   (derive BlockState ::block-state-image)
-  (derive BlockImage ::block-state-image))
+  #_(derive BlockImage ::block-state-image))
 
 
 
+
+
+#_(extend Block
+  BukkitLocatable
+  {:get-location (memfn getLocation)})
+#_(extend BlockState
+  BukkitLocatable
+  {:get-location (memfn getLocation)})
 
 ;;;; **** <util.mc>
 ;; id=util
 ;;; TODO: Move utils to util.clj.
 
 ;;;; Limit print length:
-(alter-var-root #'*print-length* (constantly 51))
+(alter-var-root #'clojure.core/*print-length* (constantly 51))
 
 ;;;; TODO: Turn debug-* funcs into macros for compile-time removability.
 (defonce ^:dynamic *debug-print* true); TODO: Is dynamic the right sort?
@@ -357,26 +381,47 @@ This version accordingly requires that separate test clauses be enclosed as sequ
 
 
 ;;; id=wrappers
-(defn get-location [obj]
+#_(defn get-location [obj]
   "Wrapper."
   (cond*
    ((instance? Vector obj) (.toLocation obj (get-current-world)))
    (:else (.getLocation obj))))
 
+(do
+  (defmulti get-location class)
+  (defmethod get-location ::bukkit-locatable [obj]
+    "By deriving various Java classes from :cljengine.mc/bukkit-locatable, we provide access to their getLocation() methods via this multimethod instance."
+    (.getLocation obj)))
+
+
 #_(defn get-location [obj]
   "Wrapper."
   (.getLocation obj))
 
-(defn get-world [^Location loc]
-"Wrapper."
-  (.getWorld loc))
+(do
+  (defmulti get-world class)
+  (defmethod get-world Location [loc] (.getWorld loc))
+  (defmethod get-world ::bukkit-locatable [obj]
+    (get-world (get-location obj))))
 
-(defn get-block-at
+(defmulti get-block-at (fn
+                         ([#^Number x #^Number y #^Number z]
+                            (vec (clojure.core/map class [x y z])))
+                         ([pos]
+                            "Wrapper that calls (.getBlockAt) in the first world found.  The 'pos' arg may be a Vector, a Location, or a supported object that has a location."
+                            (class pos))))
+(defmethod get-block-at Location [loc] (.getBlock loc))
+(defmethod get-block-at Vector [vec] (get-block-at (.toLocation vec (get-current-world))))
+(defmethod get-block-at Block [block] block)
+(defmethod get-block-at ::bukkit-locatable [im] (get-block-at (get-location im)))
+(defmethod get-block-at :default [pos]
+  (throw (IllegalArgumentException. (format "%s is not a valid type for (get-block-at)." (type pos)))))
+
+#_(defn get-block-at
   ([^Number x ^Number y ^Number z]
      "Gets blocks at vector coords."
      (get-block-at (new Vector x y z)))
   ([pos]
-     "Wrapper that calls (.getBlockAt) in the first world found.  The 'pos' arg may be a Vector or a Location."
      (cond*
       ((instance? Location pos) (.getBlockAt (get-current-world) pos))
       ((instance? Vector pos)
@@ -431,9 +476,10 @@ TODO: A more specific exception type."
    [(instance? Location obj) (.toVector obj)]
         ;; Sadly, trying to get too clever only hurts clarity:
         ;((some-fn (partial instance? Block) (partial instance? Entity)) obj)
-   [(or (instance? Block obj)
-        (instance? BlockState obj)
-        (instance? BlockImage obj)
+   [(or #_(instance? Block obj)
+        #_(instance? BlockState obj)
+        #_(instance? BlockImage obj)
+        (isa? (class obj) ::block-state-image)
         (instance? Entity obj))
     (get-vector (.getLocation obj))]
    [:else (throw
@@ -465,15 +511,19 @@ Always returns a fresh vector."
   (defmethod get-block-vector clojure.lang.PersistentVector [vec]
     (let [[x y z] vec]
       (new BlockVector (Math/floor x) (Math/floor y) (Math/floor z))))
-  (defmethod get-block-vector DependingBlock [block]
-    (get-block-vector (.block block)))
+  #_(defmethod get-block-vector DependingBlock [block]
+      (get-block-vector (.block block)))
   (defmethod get-block-vector Location [loc]
     (BlockVector. (long (.getBlockX loc))
                     (long (.getBlockY loc))
                     (long (.getBlockZ loc)) ))
+  ;(defmethod get-block-vector ::block-state-image [img])
+  (defmethod get-block-vector ::bukkit-locatable [obj] (get-block-vector (get-location obj)))
   (defmethod get-block-vector :default [obj]
     (debug-println-2 ":default method in (get-block-vector).")
-    (the* BlockVector (get-block-vector (get-location obj)))))
+    (assert false "Default method for get-block-vector disabled!")
+    ;(the* BlockVector (get-block-vector (get-location obj)))
+    ))
 
 
 (defn compare-vectors [^Vector v1 ^Vector v2]
@@ -602,7 +652,13 @@ NB: If passed a BlockState object, the result, the same object, may be out-of-to
     "Wrapper for Block.setType()."
     (.setType block mat)
     (.getType block))
-  (defmethod set-type :default [block? mat]
+  (defmethod set-type Vector [vec ma]
+    (set-type (get-location vec)))
+  (defmethod set-type Location [loc mat]
+    (set-type (the Block (get-block-at loc)) mat))
+  (defmethod set-type ::bukkit-locatable [obj mat]
+    (set-type (get-location obj) mat))
+  #_(defmethod set-type :default [block? mat]
     (debug-println-2 ":default method in (set-type).")
     (set-type (get-block-at block?) mat)))
 
@@ -936,7 +992,7 @@ When 'solid' is log. true, the block must also pass a (solid?) test."
     (the* MaterialData (get-data (get-state block))))
   (defmethod get-data BlockState [block]
     (the* MaterialData (.getData block)))
-  (defmethod get-data BlockImage [block]
+  #_(defmethod get-data BlockImage [block]
     (the* MaterialData (.. block getBlockState getData)))
   (defmethod get-data MaterialData [mat]
     mat))
@@ -1010,10 +1066,12 @@ When 'solid' is log. true, the block must also pass a (solid?) test."
    (throw (IllegalArgumentException. (format "(get-mod-vector) is valid only for a BlockFace arg, not '%s'." x)))))
 
 
-(comment
-  "This should include adjacent blocks and cattycorner."
-  (defn neighboring-blocks [b]
-   (map #(get-block-at (add b %)) [BlockFace/NORTH, BlockFace/SOUTH, BlockFace/EAST, BlockFace/WEST, BlockFace/UP, BlockFace/DOWN])))
+(defn neighboring-blocks [b & {:keys [include-self]}]
+  "Returns a list of adjacent & cattycorner blocks."
+  (let [blks (map #(get-block-at (add b %)) [BlockFace/NORTH, BlockFace/SOUTH, BlockFace/EAST, BlockFace/WEST,
+                                             BlockFace/NORTH_EAST, BlockFace/NORTH_WEST, BlockFace/SOUTH_EAST, BlockFace/SOUTH_WEST])]
+    (if include-self (conj blks b)
+        blks)))
 
 ;;;; id=DIRECTIONS
 (do

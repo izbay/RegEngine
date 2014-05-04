@@ -58,7 +58,7 @@ public class CompoundDependingBlock extends DependingBlock
 		switch(block.getType())
 		{
 		case BED_BLOCK: // Somewhat surprisingly, the "head" of the bed is not dominating end.  When you place a bed, the foot goes in the target square, the bed facing towards you.
-			final Bed bedData = (Bed)(block.getBlockState().getData());
+			final Bed bedData = (Bed)(getData());
 			this.position = bedData.isHeadOfBed() ? Position.SLAVE : Position.MASTER; 
 			break;
 		case WOODEN_DOOR: // Less surprisingly but equally amusingly, the "bottom" of the door is the more important.
@@ -89,8 +89,8 @@ public class CompoundDependingBlock extends DependingBlock
 		switch(this.getType())
 		{
 		case BED_BLOCK:
-			assert(this.block.getBlockState().getData() instanceof Bed);
-			final Bed bedData = (Bed)(block.getBlockState().getData());
+			assert(getData() instanceof Bed);
+			final Bed bedData = (Bed)(getData());
 			if(this.position == Position.MASTER)
 				other = new CompoundDependingBlock(new BlockImage(Util.add(this.block.getLocation(), bedData.getFacing()).getBlock().getState()), this.action);
 			else
@@ -105,8 +105,8 @@ public class CompoundDependingBlock extends DependingBlock
 		case PISTON_BASE:
 		case PISTON_STICKY_BASE:
 			assert(position == Position.MASTER);
-			assert(this.block.getBlockState().getData() instanceof PistonBaseMaterial);
-			final PistonBaseMaterial pb = (PistonBaseMaterial)(block.getBlockState().getData());
+			assert(getData() instanceof PistonBaseMaterial);
+			final PistonBaseMaterial pb = (PistonBaseMaterial)(getData());
 			if(pb.isPowered())
 			{	
 				other = new CompoundDependingBlock(new BlockImage(Util.add(this.getLocation(), pb.getFacing()).getBlock()), this.action); 

@@ -18,6 +18,7 @@ import clojure.lang.RT;
 //import clojure.lang.Compiler;
 
 
+import com.github.izbay.regengine.serialize.SerializedBlock;
 import com.github.izbay.util.*;
 
 public class RegEnginePlugin extends JavaPlugin 

@@ -14,6 +14,9 @@ import org.w3c.dom.Node;
 import org.w3c.dom.Element;
 import org.w3c.dom.Text;
 
+import com.github.izbay.regengine.serialize.SerializedBlock;
+import com.github.izbay.regengine.serialize.SerializedItem;
+
 import java.io.File;
 import java.util.LinkedList;
 

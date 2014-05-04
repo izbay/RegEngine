@@ -5,11 +5,13 @@ import java.util.Set;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.BlockState;
 import org.bukkit.material.Attachable;
+import org.bukkit.material.MaterialData;
 import org.bukkit.util.BlockVector;
 import org.bukkit.util.Vector;
 
@@ -20,20 +22,11 @@ public abstract class Util
 	public static double toRadians(double yaw){
 		return (270-yaw) * Math.PI / 180;
 	}
-		public static BlockVector getBlockVector(final Location l) {
-			return new BlockVector((int) l.getX(), (int) l.getY(),
-					(int) l.getZ());
-		}// getBlockVector()
-		
-		public static BlockVector getBlockVector(final Block b)
-		{	return getBlockVector(b.getLocation()); }
-
-		public static BlockVector getBlockVector(final BlockState b)
-		{	return getBlockVector(b.getLocation()); }
-
+		public static BlockVector getBlockVector(final Location l)		{ return new BlockVector((int) l.getX(), (int) l.getY(), (int) l.getZ()); }// getBlockVector() 
+		public static BlockVector getBlockVector(final Block b)			{	return getBlockVector(b.getLocation()); }
+		public static BlockVector getBlockVector(final BlockState b)	{	return getBlockVector(b.getLocation()); }
 		// For equal standing:
-		public static BlockVector getBlockVector(final BlockImage b)
-		{	return b.getBlockVector(); }
+		public static BlockVector getBlockVector(final BlockImage b)	{	return b.getBlockVector(); }
 
 		/**
 		 * @param n1
@@ -71,26 +64,17 @@ public abstract class Util
 		public static boolean equal(final Vector v1, final Vector v2)
 		{	return compare(v1,v2) == 0; }// equal()
 		
-		public static boolean isSolid(final Block b)
-		{	return b.getType().isSolid(); }// isSolid()
+		public static boolean isSolid(final Material m) 	{	return m.isSolid(); }
+		public static boolean isSolid(final Block b) 		{	return b.getType().isSolid(); }// isSolid()
+		public static boolean isSolid(final BlockState b) 	{	return b.getType().isSolid(); }// isSolid()
 		
-		public static boolean isSolid(final BlockState b)
-		{	return b.getType().isSolid(); }// isSolid()
+		public static World getCurrentWorld()	{ return Bukkit.getServer().getWorlds().get(0); }
 		
-		public static World getCurrentWorld()
-		{ return Bukkit.getServer().getWorlds().get(0); }
+		public static Block getBlockAt(final Location l) 					{ return getCurrentWorld().getBlockAt(l); }
+		public static Block getBlockAt(final Vector v, final World world)	{	return world.getBlockAt( v.getBlockX(), v.getBlockY(), v.getBlockZ()); }
 		
-		public static Block getBlockAt(final Location l)
-		{ return getCurrentWorld().getBlockAt(l); }
-
-		public static Block getBlockAt(final Vector v, final World world)
-		{	return world.getBlockAt( v.getBlockX(), v.getBlockY(), v.getBlockZ()); }
-		
-		public static Location getLocation(final Vector v, final World w)
-		{ 	return v.toLocation(w); }
-
-		public static Location getLocation(final Block b)
-		{ 	return b.getLocation(); }
+		public static Location getLocation(final Vector v, final World w)	{ 	return v.toLocation(w); }
+		public static Location getLocation(final Block b)					{ 	return b.getLocation(); }
 
 		public static Location normalizeLocation(final Location l)
 		{	return new Location(l.getWorld(), Math.floor(l.getX()), Math.floor(l.getY()), Math.floor(l.getZ()));}
@@ -164,24 +148,23 @@ public abstract class Util
 			return s;
 		}// getEnclosingBlocks()
 		
-		public static boolean isAttachable(final BlockState b)
-		{ return (b.getData() instanceof Attachable); }
-
-		public static boolean isAttachable(final Block b)
-		{ return (b.getState().getData() instanceof Attachable); }
+		public static boolean isAttachable(final BlockState b)		{ return (b.getData() instanceof Attachable); }
+		public static boolean isAttachable(final Block b)			{ return (b.getState().getData() instanceof Attachable); }
+		public static boolean isAttachable(final MaterialData dat)	{ return (dat instanceof Attachable); }
 		
 		public static Block getAttachedBlock(final Block b)
 		{	return getAttachedBlock(b.getState()); }// getAttachedFace
 	
 		public static Block getAttachedBlock(final BlockState b)
 		{
-			if( isAttachable(b))
+			if(isAttachable(b))
 			{
 				return add(getBlockAt(b.getLocation()),((Attachable) b.getData()).getAttachedFace());
 			}
 			else
 			{	return null; }
-		}// getAttachedFace
-
+		}// getAttachedBlock()
+		
+		
 		private Util() {}
 }// Util

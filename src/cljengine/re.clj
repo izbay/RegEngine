@@ -1,9 +1,45 @@
 ; -*- eval: (clojure-mode); eval: (paredit-mode); eval: (viper-mode) -*-
 
 (ns cljengine.re
-  (:use (clojure core repl reflect pprint)
-    ;    cljengine.mc
-        )
+;  (:refer-clojure :exclude [map])
+                                        ;  (:require clojure.core)
+  (:use (clojure [core :exclude [map]] repl pprint reflect set)) ;[string :exclude [join]] )
+  (:require [cljengine.mc :as mc])
+  (:refer cljengine.mc)
+  (:import (com.github.izbay.regengine RegEnginePlugin
+                                       BlockImage
+                                       RegenBatch)
+           (com.github.izbay.regengine.block Action
+                                             DependingBlock
+                                             VineDependingBlock
+                                             DependingBlockSet)
+           (com.github.izbay.util Util)))
+
+;(derive BlockImage ::block-state-image)
+
+
+#_(extend DependingBlockSet
+  BukkitLocatable
+  {:get-location (memfn getLocation)})
+
+(derive DependingBlockSet ::bukkit-locatable)
+
+(defmethod get-data BlockImage [block]
+    (the* MaterialData (.. block getBlockState getData)))
+
+
+
+
+
+
+
+
+
+
+
+#_(ns cljengine.re
+  (:use (clojure core repl reflect pprint) )
+
   ;; TODO: These aren't transferring to the gen-class calls.
   #_(:import (org.bukkit Location
                        Material)

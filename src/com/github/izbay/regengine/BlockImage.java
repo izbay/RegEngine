@@ -18,27 +18,27 @@ import org.bukkit.metadata.MetadataValue;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.util.BlockVector;
 
+import com.github.izbay.regengine.serialize.SerializedBlock;
+
 /**
  * The equality question. It is of great importance to have a working equivalence test on blocks.  The current one, which tests whether their BlockStates are equal(), works quite well, but I doubt it will do what we want in every possible case.
  * 
  * Issues noted with BlockState.update():
  * - Vehicles aren't removed when blocks around them are destroyed--they just fall.  Nor are they removed during regeneration--they're buried.
  * - It stores whether a Detector Rail is activated (and probably a pressure plate, too), which state depends on the Entity perched atop.  Stationary Vehicles I'm considering treating, but not creatures.
- * - There's an issue with a Cactus block at <-207,69,287> on my test server.  Sometimes it reports failure after regeneration when, by appearances, it regen'd fine.
- * 	 - Yeah, I can't reproduce this any more after messing up my block arrangement.
- * - It doesn't catch the contents of a Flowerpot.
  * - Bad one: Water source blocks aren't equal after regeneration; if the routine doesn't stop phys. events, it can loop forever.  This opens a breach in my restoration guarantee.
  * 
  * @author jdjs
  *
  */
-public class BlockImage implements BlockState /* TODO This may not go so smoothly if I modify BlockImage to use SerializedBlock. */
+public class BlockImage implements BlockState 
 {
 	/**
 	 * 
 	 */
-	private final Location blockLoc;
-	private final BlockState stateImage;
+	protected final Location blockLoc;
+	protected final SerializedBlock block;
+//	protected final MaterialData blockData;
 	/**
 	 * It may not be necessary or beneficial to keep a reference to the target restoration time with each block.
 	 * On the other hand, if we start merging REG EN regions, it could be very useful.
@@ -49,26 +49,29 @@ public class BlockImage implements BlockState /* TODO This may not go so smoothl
 	public BlockImage(final Block block /*, final int regenTime*/) {
 		super();
 		blockLoc = block.getLocation();
-		stateImage = block.getState();
+		this.block = new SerializedBlock(block);
+		//stateImage = block.getState();
 	//	restorationTargetTime = regenTime;
 	//	assert(regenTime >= blockLoc.getWorld().getFullTime());
 	}// ctor
 	
 	public BlockImage(final BlockState bs /*, final int regenTime*/) {
 		super();
-		stateImage = bs;
-		blockLoc = bs.getLocation().clone();
+		//stateImage = bs;
+		this.block = new SerializedBlock(bs);
+		blockLoc = bs.getLocation().clone(); // Do I need the copy op?
 		//restorationTargetTime = regenTime;
 		//assert(regenTime >= blockLoc.getWorld().getFullTime());
 	}// ctor
 
 	/**
-	 * Copy constructor (shallow copy of BlockState, which cannot easily be cloned).
+	 * Copy constructor.  As deep or shallow as the SerializedBlock() copy c.
 	 * @param b
 	 */
 	public BlockImage(final BlockImage b) {
 		super();
-		stateImage = b.stateImage;
+		//stateImage = b.stateImage;
+		this.block = new SerializedBlock(b.block);
 		blockLoc = b.getLocation().clone();
 	}// Copy c.
 
@@ -81,38 +84,53 @@ public class BlockImage implements BlockState /* TODO This may not go so smoothl
 			return new BlockVector(blockLoc.getBlockX(), blockLoc.getBlockY(), blockLoc.getBlockZ());
 	}
 	/**
+	 * I
 	 * @return the BlockState
 	 */
-	public BlockState getBlockState() { return stateImage; }
+	//public BlockState getBlockState() { return stateImage; }
 	
-	public boolean isRestored() { return stateImage.equals(blockLoc.getBlock().getState()) ; }// isRestored()
+	/**
+	 * Intention: return true if the in-world block corresponding to this snapshot is equivalent in its properties.
+	 * @return
+	 */
+	public boolean isRestored() { 
+		return block.isPlaced();
+		//	.equals(blockLoc.getBlock().getState()) ; 
+	}// isRestored()
 	
+	/**
+	 * TODO I don't know if this is the right kind of equivalence for an equals() override.
+	 * @param other
+	 * @return
+	 */
+	/*
 	public boolean equals(final BlockImage other) {
-		return stateImage.equals(other.stateImage);
+	//	return stateImage.equals(other.stateImage);
+		return this.block.equals(other) && this.getLocation().equals(other.getLocation());
 	}// equals()
+	*/
 
 	public boolean equals(final Block block) {
-		return stateImage.equals(block.getState());
+		return this.block.isBlockEquivalent(block.getState());
 	}// equals()
 	
+	/*
 	public boolean equals(final BlockState other) {
-		return stateImage.equals(other);
+		return block.equals(other.block);
 	}// equals()
+	*/	
 
 	/**
-	 * A block is placed back into the world.
+	 * A block is placed back into the world.  If the operation fails, an exception will be thrown per update(true).
 	 * @return the calling object
 	 */
-	public BlockImage restore() {
-		if( !this.isRestored() ) {
-			stateImage.update(true);
-			assert(this.isRestored());
-			return this;
-		}// if
-		else throw new RuntimeException("Called BlockImage.restore() when already restored.");
+	public BlockImage restore()
+	{	
+		update(true, false); 
+		return this;
 	}// restore()
-	
-	public Material getType() { return stateImage.getType(); }
+
+	public Material getType() { return block.getType(); }
 	
 	public BlockVector getVector()
 	{	return new BlockVector(blockLoc.getBlockX(), blockLoc.getBlockY(), blockLoc.getBlockZ()); }
@@ -120,72 +138,79 @@ public class BlockImage implements BlockState /* TODO This may not go so smoothl
 	public World getWorld() { return blockLoc.getWorld(); }
 
 	/**
+	 * FIXME: Stub
 	 * @param metadataKey
 	 * @param newMetadataValue
 	 * @see org.bukkit.metadata.Metadatable#setMetadata(java.lang.String, org.bukkit.metadata.MetadataValue)
 	 */
 	public void setMetadata(String metadataKey, MetadataValue newMetadataValue) {
-		stateImage.setMetadata(metadataKey, newMetadataValue);
+		//stateImage.setMetadata(metadataKey, newMetadataValue);
+		throw new Error("BlockImage.setMetadata() stub.");
 	}
 
 	/**
+	 * FIXME: Stub
 	 * @param metadataKey
 	 * @return
 	 * @see org.bukkit.metadata.Metadatable#getMetadata(java.lang.String)
 	 */
 	public List<MetadataValue> getMetadata(String metadataKey) {
-		return stateImage.getMetadata(metadataKey);
+		throw new Error("BlockImage.getMetadata() stub.");
 	}
 
 	/**
+	 * The block currently in the location identified by calling object's location record.
 	 * @return
 	 * @see org.bukkit.block.BlockState#getBlock()
 	 */
 	public Block getBlock() {
-		return stateImage.getBlock();
+		return getLocation().getBlock();
 	}
 
 	/**
+	 * FIXME Bad news: This needs to return an instance of the most specific applicable MaterialData subclass.
 	 * @return
 	 * @see org.bukkit.block.BlockState#getData()
 	 */
-	public MaterialData getData() {
-		return stateImage.getData();
-	}
+	public MaterialData getData() { return block.getData(); }
 
 	/**
+	 * FIXME Stub.
 	 * @param metadataKey
 	 * @return
 	 * @see org.bukkit.metadata.Metadatable#hasMetadata(java.lang.String)
 	 */
 	public boolean hasMetadata(String metadataKey) {
-		return stateImage.hasMetadata(metadataKey);
+		throw new Error("BlockImage.hasMetadata() stub.");
 	}
 
 	/**
+	 * FIXME Stub.
 	 * @return
 	 * @deprecated
 	 * @see org.bukkit.block.BlockState#getTypeId()
 	 */
 	public int getTypeId() {
-		return stateImage.getTypeId();
+		throw new Error("BlockImage.getTypeId() stub.");
 	}
 
 	/**
+	 * FIXME Stub.
 	 * @return
 	 * @see org.bukkit.block.BlockState#getLightLevel()
 	 */
 	public byte getLightLevel() {
-		return stateImage.getLightLevel();
+		throw new Error("BlockImage.getLightLevel() stub.");
 	}
 
 	/**
+	 * FIXME Stub.
 	 * @param metadataKey
 	 * @param owningPlugin
 	 * @see org.bukkit.metadata.Metadatable#removeMetadata(java.lang.String, org.bukkit.plugin.Plugin)
 	 */
 	public void removeMetadata(String metadataKey, Plugin owningPlugin) {
-		stateImage.removeMetadata(metadataKey, owningPlugin);
+		throw new Error("BlockImage.removeMetadata() stub.");
 	}
 
 	/**
@@ -193,7 +218,7 @@ public class BlockImage implements BlockState /* TODO This may not go so smoothl
 	 * @see org.bukkit.block.BlockState#getX()
 	 */
 	public int getX() {
-		return stateImage.getX();
+		return getLocation().getBlockX();
 	}
 
 	/**
@@ -201,7 +226,7 @@ public class BlockImage implements BlockState /* TODO This may not go so smoothl
 	 * @see org.bukkit.block.BlockState#getY()
 	 */
 	public int getY() {
-		return stateImage.getY();
+		return getLocation().getBlockY();
 	}
 
 	/**
@@ -209,67 +234,73 @@ public class BlockImage implements BlockState /* TODO This may not go so smoothl
 	 * @see org.bukkit.block.BlockState#getZ()
 	 */
 	public int getZ() {
-		return stateImage.getZ();
+		return getLocation().getBlockZ();
 	}
 
 	/**
+	 * FIXME Stub.
 	 * @param loc
 	 * @return
 	 * @see org.bukkit.block.BlockState#getLocation(org.bukkit.Location)
 	 */
 	public Location getLocation(Location loc) {
-		return stateImage.getLocation(loc);
+		throw new Error("BlockImage.getLocation/1 stub.");
 	}
 
 	/**
 	 * @return
 	 * @see org.bukkit.block.BlockState#getChunk()
 	 */
-	public Chunk getChunk() {
-		return stateImage.getChunk();
-	}
+	public Chunk getChunk() { return block.getChunk(); }
 
 	/**
+	 * FIXME: Stub
 	 * @param data
 	 * @see org.bukkit.block.BlockState#setData(org.bukkit.material.MaterialData)
 	 */
 	public void setData(MaterialData data) {
-		stateImage.setData(data);
+		throw new Error("The mutator semantics of BlockImage.setData() are unacceptable for implementation.");
+		//stateImage.setData(data);
 	}
 
 	/**
+	 * FIXME: Stub
 	 * @param type
 	 * @see org.bukkit.block.BlockState#setType(org.bukkit.Material)
 	 */
 	public void setType(Material type) {
-		stateImage.setType(type);
+		throw new Error("Stub mutator BlockImage.setType() unacceptable.");
+		//stateImage.setType(type);
 	}
 
 	/**
+	 * FIXME: Stub
 	 * @param type
 	 * @return
 	 * @deprecated
 	 * @see org.bukkit.block.BlockState#setTypeId(int)
 	 */
 	public boolean setTypeId(int type) {
-		return stateImage.setTypeId(type);
+		throw new Error("Stub mutator BlockImage.setTypeId() unacceptable.");
+//		return stateImage.setTypeId(type);
 	}
 
 	/**
 	 * @return
 	 * @see org.bukkit.block.BlockState#update()
 	 */
-	public boolean update() {
-		return stateImage.update();
-	}
+	public boolean update() { return block.place(); }
 
 	/**
+	 * If 'force' is true, will generate an exception if the update failed.
 	 * @param force
 	 * @return
 	 * @see org.bukkit.block.BlockState#update(boolean)
 	 */
-	public boolean update(boolean force) {
-		return stateImage.update(force);
+	public boolean update(final boolean force) {
+		final boolean res = update();
+		if(force && !this.isRestored()) { throw new Error("Failure in BlockImage.update(true)."); }
+		return res;
 	}
 
 	/**
@@ -278,9 +309,19 @@ public class BlockImage implements BlockState /* TODO This may not go so smoothl
 	 * @return
 	 * @see org.bukkit.block.BlockState#update(boolean, boolean)
 	 */
-	public boolean update(boolean force, boolean applyPhysics) {
-		return stateImage.update(force, applyPhysics);
-	}
+	public boolean update(final boolean force, final boolean applyPhysics) {
+		if(applyPhysics)
+		{	return update(force); }// if
+		else
+		{	
+			RegEnginePlugin.getInstance().doWithDisabledPhysics(new Runnable() { public void run() {
+					update(force);
+				}// lambda
+			});
+				
+			return isRestored();
+		}// else
+	}// update()
 
 	/**
 	 * @return
@@ -288,16 +329,17 @@ public class BlockImage implements BlockState /* TODO This may not go so smoothl
 	 * @see org.bukkit.block.BlockState#getRawData()
 	 */
 	public byte getRawData() {
-		return stateImage.getRawData();
+		return block.getRawData();
 	}
 
 	/**
+	 * FIXME Stub
 	 * @param data
 	 * @deprecated
 	 * @see org.bukkit.block.BlockState#setRawData(byte)
 	 */
 	public void setRawData(byte data) {
-		stateImage.setRawData(data);
+		throw new Error("BlockImage.setRawData() stub.");
 	}
 	
 	

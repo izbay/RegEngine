@@ -1,11 +1,6 @@
 ; -*- eval: (clojure-mode); eval: (paredit-mode); eval: (viper-mode); eval: (cider '127.0.0.1 4005) -*-
 
-(comment " Try running the following in Emacs Lisp to get the REPL going: "
-         (progn
-          (if (not (cider-connected-p)) (cider "127.0.0.1" 4005)
-              (cider-interactive-eval-to-repl "(in-ns 'cljengine.regen)")
-              (cider-switch-to-current-repl-buffer)
-              (paredit-mode))))
+
 
 (ns cljengine.regen
   "Testing Clojure in Minecraft."
@@ -84,6 +79,12 @@
                                          WeaponEventObserver)
            (com.github.izbay.util Util)) )
 
+(comment " Try running the following in Emacs Lisp to get the REPL going: "
+         (progn
+          (if (not (cider-connected-p)) (cider "127.0.0.1" 4005)
+              (cider-interactive-eval-to-repl "(in-ns 'cljengine.regen)")
+              (cider-switch-to-current-repl-buffer)
+              (paredit-mode))))
                                         ;(declare physics-blocking-handler, player-move-event-handler)
 
 

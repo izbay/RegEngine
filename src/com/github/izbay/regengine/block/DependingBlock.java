@@ -13,6 +13,7 @@ import org.bukkit.block.BlockFace;
 import org.bukkit.block.BlockState;
 import org.bukkit.util.BlockVector;
 
+import org.bukkit.material.MaterialData;
 import org.bukkit.material.Vine;
 
 import com.github.izbay.regengine.BlockImage;
@@ -68,6 +69,9 @@ public class DependingBlock {
 						(d1.action == Action.RESTORE_AFTER_LOSS || d2.action == Action.RESTORE_AFTER_LOSS) ? Action.RESTORE_AFTER_LOSS : Action.RESTORE)) );
 			if(!d1.coord().equals(d2.coord()))  { throw new IllegalArgumentException("Vector mismatch in DependingBlock() ctor."); }
 		}// ctor
+		
+		public MaterialData getData()
+		{	return block.getData(); }
 		
 		/**
 		 * A 'DESTROY' action in either block will override any type in the other.  
@@ -183,6 +187,7 @@ public class DependingBlock {
 		*/
 	}// dupleBlockDependency()
 	
+	public boolean isAttachable() { return Util.isAttachable(this.block); }
 	
 	public DependingBlockSet attachmentFwdDependency()
 	{
@@ -202,8 +207,8 @@ public class DependingBlock {
 		final DependingBlock b = this;
 		final DependingBlockSet set = new DependingBlockSet();
 		
-		if(Util.isAttachable(b.block.getBlockState()))
-		{	set.add(DependingBlock.from(Util.getAttachedBlock(b.block.getBlockState()), Action.RESTORE)); }// if
+		if(Util.isAttachable(b.block.getData()))
+		{	set.add(DependingBlock.from(Util.getAttachedBlock(b.block), Action.RESTORE)); }// if
 		
 		return set;
 	}// attachmentRevDependency()
@@ -261,7 +266,7 @@ public class DependingBlock {
 			}// if
 		}// if
 		// TODO: This may not be accurate enough, so find a better criterion for when a vine can be stuck to a block:
-		else if(Util.isSolid(b.block.getBlockState()))
+		else if(getType().isSolid())
 		{
 			for(BlockFace dir : Util.adjacentDirections())
 			{
@@ -292,7 +297,7 @@ public class DependingBlock {
 			for(BlockFace dir : Util.adjacentDirections())
 			{
 				final Block bAdj = Util.add(Util.getBlockAt(b.block.getLocation()),dir);
-				if(Util.isSolid(bAdj) && ((Vine)(b.block.getBlockState().getData())).isOnFace(dir))
+				if(Util.isSolid(bAdj) && ((Vine)(b.getData())).isOnFace(dir))
 				{ set.add(DependingBlock.from(bAdj, Action.RESTORE)); }// if
 			}// for
 		}// if
@@ -328,5 +333,10 @@ public class DependingBlock {
 	
 	public Block getBlockAbove()
 	{ return Util.getBlockAbove(this.block); }// getBlockAbove()
+	
+	public Block getAttachedBlock() {
+		return Util.getAttachedBlock(this.block);
+	}// getAttachedBlock()
+
 			
-	} // DependingBlock
+} // DependingBlock

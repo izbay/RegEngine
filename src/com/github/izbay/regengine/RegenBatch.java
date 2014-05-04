@@ -15,11 +15,18 @@ import org.bukkit.plugin.Plugin;
 import org.bukkit.util.BlockVector;
 import org.bukkit.util.Vector;
 import com.github.izbay.regengine.block.*;
+import com.github.izbay.regengine.serialize.SerializedBlock;
 import com.github.izbay.util.*;
 
 /**
- * @author Dumaiu
- *
+ * @author jdjs
+ * An essential timing property we wish to hold invariant is 
+ * 	$$ \exists B_1, B_2 \in activeBatches . (vectors B_1) \cap (vectors B_2) \ne \emptyset \Rightarrow (t_s(B_1) < t_s(B_2) \rightarrow t_f(B_1) > t_f(B_2)) \land t_f(B_1) \ne t_f(B_2) $$
+ * $t_s()$ and $t_f()$ refer to batch queue and restoration times, or 'start' and 'finish', respectively.
+ * Two batches $B_1$ & $B_2$ 'overlap' if $(vectors B_1) \cap (vectors B_2)$ is nonempty, meaning the regions in space they contain intersect.  I hesitated to specify the intersection of $B_1$ and $B_2$ *themselves*, since this could introduce ambiguity about block equivalence.
+ * The $t_f(B_1) \ne t_f(B_2)$ clause addresses our not knowing whether the execution order of two tasks scheduled for the same tick can be predicted.  Since the second task to be executed will dominate, we need this certainty.  
+ * 
+ * 
  */
 public class RegenBatch implements RegenBatchIface 
 {

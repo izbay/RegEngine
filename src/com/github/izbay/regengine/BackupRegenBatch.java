@@ -6,6 +6,8 @@ import org.bukkit.World;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.util.Vector;
 
+import com.github.izbay.regengine.serialize.SerializedBlock;
+
 public class BackupRegenBatch extends RegenBatch 
 {
 

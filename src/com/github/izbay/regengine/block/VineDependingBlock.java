@@ -46,7 +46,7 @@ public class VineDependingBlock extends DependingBlock
 		final boolean isVineAbove = (bAbove.getType() == Material.VINE);
 		for(BlockFace dir : Util.adjacentDirections())
 		{
-			final MaterialData mat = block.getBlockState().getData();
+			final MaterialData mat = this.getData();
 			if( ((Vine) mat).isOnFace(dir) )
 			{ 
 				vineCoveredFaces.add(dir);
