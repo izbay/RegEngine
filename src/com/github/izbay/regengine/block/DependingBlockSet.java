@@ -6,7 +6,6 @@ import org.bukkit.block.BlockState;
 import org.bukkit.util.BlockVector;
 
 import com.github.izbay.regengine.BlockImage;
-//import com.github.izbay.util.Util;
 
 public class DependingBlockSet implements Iterable<DependingBlock>
 {
@@ -16,20 +15,18 @@ public class DependingBlockSet implements Iterable<DependingBlock>
 	{	return blocks.values().iterator(); }
 	
 	// Default constructor:
-	public DependingBlockSet()
-	{
+	public DependingBlockSet() { 
 		super();
-		this.blocks = new HashMap<BlockVector,DependingBlock>();
+		this.blocks = new LinkedHashMap<BlockVector,DependingBlock>();
 	}// ctor
 	
 	/**
 	 * Copy constructor.
 	 * @param rhs
 	 */
-	public DependingBlockSet(final DependingBlockSet rhs)
-	{
+	public DependingBlockSet(final DependingBlockSet rhs) {
 		super();
-		this.blocks = new HashMap<BlockVector,DependingBlock>();
+		this.blocks = new LinkedHashMap<BlockVector,DependingBlock>();
 		for(BlockVector v : rhs.blocks.keySet())
 		{	this.blocks.put(v,rhs.blocks.get(v)); }
 	}// ctor
@@ -38,23 +35,39 @@ public class DependingBlockSet implements Iterable<DependingBlock>
 	 * Construct from an already extant collection.
 	 * @param coll
 	 */
-	public DependingBlockSet(final Iterable<DependingBlock> coll)
-	{
+	public DependingBlockSet(final Iterable<DependingBlock> coll) {
 		super();
-		this.blocks = new HashMap<BlockVector,DependingBlock>();
+		this.blocks = new LinkedHashMap<BlockVector,DependingBlock>();
 		for(DependingBlock b : coll)
 		{ this.add(b); }// for
 	}// ctor
 	
-	// Merging constructor.  Does not modify its args.
-	public DependingBlockSet(final DependingBlockSet s1, final DependingBlockSet s2)
-	{
+	/**
+	 * Merging constructor.  Does not modify its args.
+	 * @param s1
+	 * @param s2
+	 * Correctness claim: Abbreviate this constructor as $c()$.  Then $\forall DependingBlockSet s1,s2. \forall DependingBlock d. d \in c(s1,s2) \Leftrightarrow  \exists DependingBlock d' . d' \in s1 \lor d' \in s2 \land d = d'. $
+	 * 		Equality is given by Util.areBlocksEquivalent(DependingBlock,DependingBlock).
+	 * Proof ($\Leftarrow$): If $d$ is in s1 but not s2, it gets loaded automatically.  If in s2 but not s1, it gets placed during the loop.  If in both, the output of mergeWith(s1,s2) is used, and--see DependingBlock.java--s1 = s2 = mergeWith(s1,s2).
+	 * Proof ($\Rightarrow$): Every block in the output map must have been added either from s1, s2, or s1.mergeWith(s2), and block equivalence always holds.∎ 
+	 * Claim: Commutative operation.
+	 * Proof: The only field being set is this.blocks.  First, note that, because sets are unordered, the claim is trivial if s1 & s2 are disjoint, because we are merely starting with s1 and adding the contents of s2 sequentially.
+	 * Intersection is determined by equality of blocks' vectors, a symmetric test.  In the event of a nonempty intersection, the result of DependingBlock.mergeWith() is used for each collision, and it is also commutative, as argued in DependingBlock.java, finishing the proof.
+	 * Claim: Associative operation.  $\forall DependingBlockSet s1,s2,s3. c(s1,c(s2,s3)).equals(c(c(s1,s2),s3))$, where equality between DependingBlocks is full equals() equality, not "equality modulo actions."
+	 * Proof: Thanks to commutativity, we know that c(s1,c(s2,s3))==c(c(s2,s3),s1) and c(c(s1,s2),s3)==c(c(s2,s1),s3).  Our goal is now to establish that c(c(s2,s3),s1).equals(c(c(s2,s1),s3)).  First, note that every block $\in s2$ but not s1 or s3 gets passed straight through to the output with no change.
+	 * Next, note next that if a block is in $s2 \cap s3 - s1$ or $s2 \cap s1 - s3$, the corresponding output in for each of the candidate cases will consist of a single mergeWith() call.  
+	 * If a vector denotes a block $\in s1 \cap s2 \cap s3$, we rely on the associativity of mergeWith() itself.  
+	 * Furthermore, if a block is in $s1 \cap s3 - s2$, it is the commutativity of mergeWith() that proves that part of the output to match.
+	 * Finally, if it appears in $\s1 \oplus s3 - s2$, it also gets transferred directly to output.  This completes the partition.∎
+	 * NB: By union, intersection, etc. I here mean loose block equivalence.  $d \in s1 \cap s2 \Rightarrow \exists d1 \in s1 \exists d2 \in s2. Util.areBlocksEquivalent(d,d1) \land Util.areBlocksEquivalent(d,d2)$.
+	 */
+	public DependingBlockSet(final DependingBlockSet s1, final DependingBlockSet s2) {
 		super();
-		this.blocks = new HashMap<BlockVector,DependingBlock>(s1.blocks);
-		for(BlockVector v : s2.blocks.keySet())
+		this.blocks = new LinkedHashMap<BlockVector,DependingBlock>(s1.blocks);
+		for(Map.Entry<BlockVector,DependingBlock> entry : s2.blocks.entrySet())
 		{
-			this.blocks.put(v, (this.blocks.containsKey(v) ? this.blocks.get(v).mergeWith(s2.blocks.get(v))
-															: s2.blocks.get(v)));
+			this.blocks.put(entry.getKey(), (this.blocks.containsKey(entry.getKey()) ? this.blocks.get(entry.getKey()).mergeWith(entry.getValue())
+															: entry.getValue()));
 		}// for
 	}// ctor
 
@@ -62,8 +75,7 @@ public class DependingBlockSet implements Iterable<DependingBlock>
 	 * Creates a singleton set.
 	 * @param b
 	 */
-	public DependingBlockSet(final DependingBlock b)
-	{
+	public DependingBlockSet(final DependingBlock b) {
 		this();
 		this.add(b);
 	}// ctor
@@ -114,15 +126,19 @@ public class DependingBlockSet implements Iterable<DependingBlock>
 		return this;
 	}// add()
 	
-	public boolean contains(final BlockVector v)
-	{ return blocks.containsKey(v); }
+	public boolean contains(final BlockVector v) { return blocks.containsKey(v); }
 	
-	public boolean isEmpty()
-	{	return this.blocks.isEmpty(); }
+	public boolean isEmpty() {	return this.blocks.isEmpty(); }
 	
-	public int size()
-	{	return blocks.size(); }
+	public int size() {	return blocks.size(); }
 	
+	/**
+	 * @param s1
+	 * @param s2
+	 * @return
+	 * Claim: Commutative & associative operation.
+	 * Proof follows from these properties of the DependingBlockSet 'merging constructor' which is employed.
+	 */
 	public static DependingBlockSet union(final DependingBlockSet s1, final DependingBlockSet s2)
 	{ return new DependingBlockSet(s1, s2); }
 	
@@ -171,17 +187,10 @@ public class DependingBlockSet implements Iterable<DependingBlock>
 				// Otherwise it has been encountered before--though the search may not have branched off its path yet.
 				else // sOut contains dDep
 				{
-/*					if(!sSearch.containsKey(v))
-					{	sSearch.put(v, dDep); }// if
-					else
-					{
-						assert(sSearch.get(v).equals(sOut.blocks.get(v)));
-
-					*/
 					// If the block is in the search queue already, we perhaps will need to _update_ that value.  We now compare the new with the value currently in the output set:
-                        final DependingBlock prevVal = sOut.blocks.get(v);
-						// This merge operation is polymorphic: in the basic case it only checks the values of the action() fields, overriding a soft with a hard.  But in the Vine case, for example, it also calculates whether there is enough "evidence" to _upgrade_ a vine from a soft to a hard dependency.
-						final DependingBlock newVal = prevVal.mergeWith(dDep);
+					final DependingBlock prevVal = sOut.blocks.get(v);
+					// This merge operation is polymorphic: in the basic case it only checks the values of the action() fields, overriding a soft with a hard.  But in the Vine case, for example, it also calculates whether there is enough "evidence" to _upgrade_ a vine from a soft to a hard dependency.
+					final DependingBlock newVal = prevVal.mergeWith(dDep);
 
 					// Now what do we do with that?  The values in sOut and also sSearch--if prevVal is also in the search queue--need to be updated.  However, if the block has already been searched, but there has been a qualitative change, it must go _back_ in the queue.  This is how we handle the complicated Vine relationships.
 					if(sSearch.containsKey(v))
@@ -190,20 +199,20 @@ public class DependingBlockSet implements Iterable<DependingBlock>
 						sSearch.put(v, newVal);
 					}// if
 					else if(newVal.action().isHardDependency() 
-								&& !prevVal.action().isHardDependency())
+							&& !prevVal.action().isHardDependency())
 					{
-							sSearch.put(v, newVal);
-							assert(sSearch.get(v).action().isHardDependency());
+						sSearch.put(v, newVal);
+						assert(sSearch.get(v).action().isHardDependency());
 					}// elif 
-					
+
 					// Now, update sOut in either case: 
-                    sOut.blocks.put(v,newVal);
+					sOut.blocks.put(v,newVal);
 					/*}// else*/
 				}// else
 				assert(sOut.blocks.containsKey(dDep.coord()));
 			}// for
 		}// while
-		
+
 		return sOut;
 	}// doFwdDepsSearch()
 
@@ -212,20 +221,20 @@ public class DependingBlockSet implements Iterable<DependingBlock>
 		final DependingBlockSet sIn = this;
 		final DependingBlockSet sOut = new DependingBlockSet(sIn); 
 		final DependingBlockSet sSearch = new DependingBlockSet(sIn);
-		
+
 		//int loop_counter = 0;
 		while(!sSearch.isEmpty())
 		{
 			//++loop_counter;
-			//if(loop_counter > 1000000000) throw new Error("Infinite loop detected in doRevDepsSearch().");
-			
+			//if(loop_counter > 1000000000) throw new Error("Infinite loop probable in doRevDepsSearch().");
+
 			final Iterator<DependingBlock> it = sSearch.blocks.values().iterator();
 			final DependingBlock b = it.next();
 			it.remove();
-			
+
 			final DependingBlockSet sD = b.allRevDependencies();
 			for(Map.Entry<BlockVector,DependingBlock> entry : sD.blocks.entrySet())
-			//for(BlockVector vDep : sD.blocks.keySet())
+				//for(BlockVector vDep : sD.blocks.keySet())
 			{
 				//final DependingBlock dDep = sD.blocks.get(vDep);
 				// We can't assert this: assert(!entry.getValue().action().isHardDependency()); // because the dupleBlockDependency() check will return both parts with Action.DESTROY if one of them has it.
@@ -241,32 +250,54 @@ public class DependingBlockSet implements Iterable<DependingBlock>
 				{	
 					assert(!sOut.contains(entry.getKey()));
 				}// else
-				*/
+				 */
 			}// for
 		}// while
 
 		return sOut;
-    }// doRevDepsSearch()
-	
+	}// doRevDepsSearch()
+
 	public DependingBlockSet doFullDependencySearch()
 	{ return this.doFwdDepsSearch().doRevDepsSearch(); }
-	
-	public Set<BlockVector> intersection(final DependingBlockSet rhs)
+
+
+//	public Set<BlockVector> intersection(final DependingBlockSet rhs) {
+	/**
+	 * @param s2
+	 * @return
+	 * Claim: Commutative operation.
+	 * Proof: By commutativity of mergeWith().
+	 * Claim: Associative operation.
+	 * Proof: By associativity of mergeWith().
+	 */
+	public DependingBlockSet intersection(final DependingBlockSet s2) 
 	{
-		final Set<BlockVector> set = new LinkedHashSet<BlockVector>();
-		for(BlockVector v : this.blocks.keySet())
-		{	if(rhs.contains(v)) set.add(v); }
+		final DependingBlockSet s1 = this;
+		final LinkedHashSet<DependingBlock> set = new LinkedHashSet<DependingBlock>();
 		
-		return set;
+		for(Map.Entry<BlockVector,DependingBlock> entry : s1.blocks.entrySet())
+		//final Set<BlockVector> set = new LinkedHashSet<BlockVector>();
+		{	
+			if(s2.contains(entry.getKey())) 
+			{	set.add(entry.getValue().mergeWith(s2.get(entry.getKey()))); }// if
+		}// for
+
+		return new DependingBlockSet(set);
 	}// intersection()
-	
-	public DependingBlockSet difference(final DependingBlockSet rhs)
-	{
-		final DependingBlockSet newSet = new DependingBlockSet(this);
-		for(BlockVector v : rhs.blocks.keySet())
-		{	if(this.contains(v)) newSet.blocks.remove(v); }
-		
-		return newSet;
+
+	/**
+	 * @param rhs
+	 * @return
+	 * Claim: $\forall DependingBlockSet s1,s2.s3. (s1 - s3) - s2 == (s1 - s2) - s3$.
+	 * Proof: Easy; starting with the blocks from s1, those in $s2 \cup s3$ are removed.
+	 */
+	public DependingBlockSet difference(final DependingBlockSet rhs) {
+		final LinkedHashSet<DependingBlock> set = new LinkedHashSet<DependingBlock>(this.blocks.values());
+
+		for(Map.Entry<BlockVector,DependingBlock> entry : rhs.blocks.entrySet())
+		{	if(this.contains(entry.getKey())) set.remove(entry.getValue()); }
+
+		return new DependingBlockSet(set);
 	}// difference()
-	
+
 }// DependingBlockSet

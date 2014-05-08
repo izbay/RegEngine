@@ -10,12 +10,19 @@ import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.BlockState;
+import org.bukkit.block.Chest;
+import org.bukkit.block.Sign;
+import org.bukkit.inventory.Inventory;
+import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.material.Attachable;
 import org.bukkit.material.MaterialData;
 import org.bukkit.util.BlockVector;
 import org.bukkit.util.Vector;
 
-import com.github.izbay.regengine.BlockImage;
+import com.github.izbay.regengine.*;
+import com.github.izbay.regengine.block.Action;
+import com.github.izbay.regengine.block.DependingBlock;
+import com.github.izbay.regengine.serialize.*;
 
 public abstract class Util 
 {
@@ -165,6 +172,61 @@ public abstract class Util
 			{	return null; }
 		}// getAttachedBlock()
 		
+	public static String[] getPossibleSignText(final BlockState bs)
+	{ return (bs.getType() == Material.SIGN) ? ((Sign)bs).getLines() : null; }
+
+	public static Inventory getPossibleBlockInventory(final BlockState bs) {
+		if(bs instanceof Chest) { 
+			return ((Chest)bs).getBlockInventory();
+		} else if(bs instanceof InventoryHolder) {
+			return ((InventoryHolder)bs).getInventory();
+		} else return null;
+	}// getPossibleBlockInventory()
+
+	/**
+	 * A notion of observable equivalence.
+	 * @param bs
+	 * @return
+	 * The retval is a conjunction of various calls to equals() overloaded for preexisting types; we assume these qualify as equivalence relations.
+	 * Because boolean conjunction is associative & commutative, it should be possible to show that permutation makes for equivalence.
+	 */
+	public static boolean areBlocksEquivalent(final SerializedBlock sb, final BlockState bs)
+	{
+		// TODO: .date field?
+		return sb.getBlockWorld().equals(bs.getWorld().getName())
+			&& sb.getBlockType().equals(bs.getType())
+			&& sb.getVector().equals(Util.getBlockVector(bs))
+			//&& this.getX() == bs.getX() && this.getY() == bs.getY() && this.getZ() == bs.getZ()
+			&& sb.getData().equals(bs.getData())
+			//&& this.data == bs.getData().getData()
+			&& sb.getSignText().equals(getPossibleSignText(bs))
+			&& sb.getInventory().equals(getPossibleBlockInventory(bs)) ;
+	}// isBlockEquivalent()
+	public static boolean areBlocksEquivalent(final BlockState bs, final SerializedBlock sb)		{	return areBlocksEquivalent(sb, bs); }
+	public static boolean areBlocksEquivalent(final BlockState b1, final BlockState b2)				{	return b1.equals(b2); }
+	public static boolean areBlocksEquivalent(final BlockImage b1, final BlockImage b2)				{	return b1.equals(b2); }
+	public static boolean areBlocksEquivalent(final BlockImage b1, final BlockState bs)				{	return b1.equals(bs); }
+	public static boolean areBlocksEquivalent(final BlockState bs, final BlockImage b1)				{	return b1.equals(bs); }
+	/**
+	 * @param b1
+	 * @param b2
+	 * @return
+	 * Claim: Equivalence relation.
+	 * Proof: The predefined equals() method is an equiv. rel.
+	 */
+	public static boolean areBlocksEquivalent(final SerializedBlock b1, final SerializedBlock b2)	{	return b1.equals(b2); }
+	/**
+	 * @param b1
+	 * @param b2
+	 * @return
+	 * Note that block equivalence for DependingBlocks is *not* the same as an equals() test!  Comparison of the action() field is deliberately omitted.
+	 * Claim: Equivalence relation.
+	 * Proof: BlockImage.equals(BlockImage) is an equivalence relation; see BlockImage.java.
+	 */
+	public static boolean areBlocksEquivalent(final DependingBlock b1, final DependingBlock b2)	
+	{	return /*b1.action() == b2.action() &&*/ b1.block().equals(b2.block()); }
+	
+	//public boolean areBlocksEquivalent(final )
 		
-		private Util() {}
+	private Util() {}
 }// Util

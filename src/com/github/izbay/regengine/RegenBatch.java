@@ -20,9 +20,9 @@ import com.github.izbay.util.*;
 
 /**
  * @author jdjs
- * An essential timing property we wish to hold invariant is 
- * 	$$ \exists B_1, B_2 \in activeBatches . (vectors B_1) \cap (vectors B_2) \ne \emptyset \Rightarrow (t_s(B_1) < t_s(B_2) \rightarrow t_f(B_1) > t_f(B_2)) \land t_f(B_1) \ne t_f(B_2) $$
- * $t_s()$ and $t_f()$ refer to batch queue and restoration times, or 'start' and 'finish', respectively.
+ * Correctness: An essential timing property we wish to hold invariant is 
+ * 	$$ \exists B_1, B_2 \in activeBatches . (vectors B_1) \cap (vectors B_2) \ne \emptyset \Rightarrow (t_s(B_1) < t_s(B_2) \rightarrow t_f(B_1) > t_f(B_2)) \land t_f(B_1) \ne t_f(B_2) $$,
+ * where $t_s()$ and $t_f()$ refer to batch queue and restoration times, or 'start' and 'finish', respectively.
  * Two batches $B_1$ & $B_2$ 'overlap' if $(vectors B_1) \cap (vectors B_2)$ is nonempty, meaning the regions in space they contain intersect.  I hesitated to specify the intersection of $B_1$ and $B_2$ *themselves*, since this could introduce ambiguity about block equivalence.
  * The $t_f(B_1) \ne t_f(B_2)$ clause addresses our not knowing whether the execution order of two tasks scheduled for the same tick can be predicted.  Since the second task to be executed will dominate, we need this certainty.  
  * 
@@ -34,20 +34,19 @@ public class RegenBatch implements RegenBatchIface
 	public enum Type { DESTRUCTION, CREATION, BACKUP };
 
 	protected final World world;
-	protected long queueTime = 0;
-	protected final long delay;
-	public final DependingBlockSet blocks;
-	public final Material newMaterial;
 	public final Plugin plugin;
-	public final Type batchType;
-	public Set<RestorationWarnings> warner = new LinkedHashSet<RestorationWarnings>();
-	//public Map<Location, SerializedBlock> blockMap;
+	protected long queueTime = 0;
 	protected Status status;
+	public final Type batchType;
+	protected final long delay;
+	public final Material newMaterial;
+	public final DependingBlockSet blocks; // The main "list" of blocks for the batch
+	//public BlockImage[] blocks; // Comment this out until I'm ready to use it
+
+	public Set<RestorationWarnings> warner = new LinkedHashSet<RestorationWarnings>();
 	public final LinkedList<SerializedBlock> blockOrder = new LinkedList<SerializedBlock>();
 
 	protected static final Map<World,LinkedHashSet<RegenBatch>> activeBatches = new LinkedHashMap<World,LinkedHashSet<RegenBatch>>();
-
-	//	private BlockImage[] blocks; // Comment this out until I'm ready to use it
 
 	public static Map<World,LinkedHashSet<RegenBatch>> activeBatches() { return activeBatches; }
 	public static Set<RegenBatch> activeBatches(final World world) { return activeBatches.get(world); }
@@ -101,16 +100,14 @@ public class RegenBatch implements RegenBatchIface
 
 
 	/**
-	 * Factory method.  Intended as the 
+	 * Factory method.  Intended as the primary means for a client to initiate the removal/restoration process for a new batch.
 	 * @param blockVectors
 	 * @param world
 	 * @param targetTime
 	 * @return
 	 */
-	public static RegenBatch destroying(final Plugin plugin, final World world, final Iterable<Vector> blockVectors, final long delay)
-	{	return new RegenBatch(plugin, world, blockVectors, delay); }
-	public static RegenBatch destroying(final Plugin plugin, final World world, final Vector[] blockVectors, final long delay)
-	{	return destroying(plugin, world, Arrays.asList(blockVectors), delay); }
+	public static RegenBatch destroying(final Plugin plugin, final World world, final Iterable<Vector> blockVectors, final long delay)	 {	return new RegenBatch(plugin, world, blockVectors, delay); }
+	public static RegenBatch destroying(final Plugin plugin, final World world, final Vector[] blockVectors, final long delay)			 {	return destroying(plugin, world, Arrays.asList(blockVectors), delay); }
 	
 	
 	/**
@@ -125,13 +122,6 @@ public class RegenBatch implements RegenBatchIface
 		return new BackupRegenBatch(plugin, world, blockVectors);
 	}// storing()
 	
-	public static RegenBatch altering(final Plugin plugin, final World w, final Iterable<Vector> blockVectors, final Material newMat, final long delay)
-	{
-		if(BlockTypes.isDestroyed(newMat))
-		{	return( destroying(plugin, w, blockVectors, delay) ); }// if
-		else
-		{	return new RegenBatch(plugin, w, blockVectors, delay); }// else
-	}// altering()
 	/**
 	 * Synonym for RegenBatch.destroying().
 	 * @param plugin
@@ -140,6 +130,13 @@ public class RegenBatch implements RegenBatchIface
 	 * @param delay
 	 * @return
 	 */
+	public static RegenBatch altering(final Plugin plugin, final World w, final Iterable<Vector> blockVectors, final Material newMat, final long delay)
+	{
+		if(BlockTypes.isDestroyed(newMat))
+		{	return( destroying(plugin, w, blockVectors, delay) ); }// if
+		else
+		{	return new RegenBatch(plugin, w, blockVectors, delay); }// else
+	}// altering()
 	public static RegenBatch altering(final Plugin plugin, final World world, final Iterable<Vector> blockVectors, final long delay)
 	{	return destroying(plugin, world, blockVectors, delay); }
 	
@@ -268,7 +265,7 @@ public class RegenBatch implements RegenBatchIface
 	}// destroyAndRestore()
 
 	/**
-	 * For internal use.  Does *not* queue for regeneration.  To cause that as well, use .alterAndRestore().
+	 * For internal use.  Does *not* queue for regeneration.  For addition of that step, use .alterAndRestore().
 	 * @return
 	 */
 	public RegenBatch batchAlter()
@@ -411,14 +408,16 @@ public class RegenBatch implements RegenBatchIface
 			}, this.delay);
 
 			// Enable warnings if applicable:
+			// TODO: Consolidate the "warners" into one instance i/s/o using one per block. 
 			if(RegEnginePlugin.getInstance().sendRegenPlayerWarnings)
 			{
-				for(Map.Entry<BlockVector,DependingBlock> entry : this.blocks.blocks.entrySet())
+				for(DependingBlock b : this.blocks)
+				//for(Map.Entry<BlockVector,DependingBlock> entry : this.blocks.blocks.entrySet())
 				{
 					// Start the warning system iff the block is of a material unhealthy to inhabit:
-					if(BlockTypes.needsWarnPlayerOnRegeneration(entry.getValue().block.getType()))
+					if(BlockTypes.needsWarnPlayerOnRegeneration(b.getType()))
 					{
-						final RestorationWarnings w = new RestorationWarnings(this.delay, Util.getLocation(entry.getKey(), world), this.plugin);
+						final RestorationWarnings w = new RestorationWarnings(this.delay, b.getLocation(), this.plugin);
 						w.start();
 						warner.add(w);
 					}// if
@@ -433,9 +432,10 @@ public class RegenBatch implements RegenBatchIface
 		return this;
 	}// queueBatchRestoration()		
 
-	
+/* FIXME	
 	public Set<BlockVector> intersection(final RegenBatch rhs)
 	{ return this.blocks.intersection(rhs.blocks); }// intersection()
+	*/
 	
 	public long getProjectedRestorationTime()
 	{	return delay + this.world.getFullTime(); }
@@ -527,9 +527,11 @@ public class RegenBatch implements RegenBatchIface
 	 * @return
 	 * @see com.github.izbay.regengine.block.DependingBlockSet#intersection(com.github.izbay.regengine.block.DependingBlockSet)
 	 */
+	/* FIXME
 	public Set<BlockVector> intersection(final DependingBlockSet rhs) {
 		return blocks.intersection(rhs);
 	}
+	*/
 	
 	
 }// RegenBatch

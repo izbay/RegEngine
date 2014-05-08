@@ -30,21 +30,10 @@ public class SerializedBlock implements Comparable<SerializedBlock> {
 	private final SerializedInventory inventory;
 	
 	// Assistance functions for making constructor chaining more readable!
-	protected static String[] possibleSignText(final BlockState bs)
-	{ return (bs.getType() == Material.SIGN) ? ((Sign)bs).getLines() : null; }
-	protected static Inventory possibleBlockInventory(final BlockState bs) {
-		if(bs instanceof Chest) { 
-			return ((Chest)bs).getBlockInventory();
-		} else if(bs instanceof InventoryHolder) {
-			return ((InventoryHolder)bs).getInventory();
-		} else return null;
-	}// possibleBlockInventory()
+	protected static String[] possibleSignText(final BlockState bs) { return Util.getPossibleSignText(bs); }
+	protected static Inventory possibleBlockInventory(final BlockState bs) { return Util.getPossibleBlockInventory(bs); } // possibleBlockInventory()
 	
-	/**
-	 * A notion of observable equivalence.
-	 * @param bs
-	 * @return
-	 */
+	/*
 	@SuppressWarnings("deprecation")
 	public boolean isBlockEquivalent(final BlockState bs)
 	{
@@ -60,6 +49,7 @@ public class SerializedBlock implements Comparable<SerializedBlock> {
 	
 	public boolean isBlockEquivalent(final SerializedBlock sb)
 	{	return this.equals(sb); }
+	*/
 	
 	public Material getType() { return dType; }
 	public World getWorld() { return dWorld; }
@@ -74,6 +64,9 @@ public class SerializedBlock implements Comparable<SerializedBlock> {
 	}// getData()
 
 	public Chunk getChunk() { return getWorld().getChunkAt(getX(), getZ()); }
+	
+	public String[] getSignText() { return this.signtext; }
+	public SerializedInventory getInventory() { return this.inventory; }
 
 	public SerializedBlock(final Block block){
 		this(block.getState());
@@ -189,7 +182,7 @@ public class SerializedBlock implements Comparable<SerializedBlock> {
 	}// place()
 	
 	public boolean isPlaced()
-	{	return this.isBlockEquivalent(getWorld().getBlockAt(getX(), getY(), getZ()).getState()); }
+	{	return Util.areBlocksEquivalent(this, getWorld().getBlockAt(getX(), getY(), getZ()).getState()); }
 	
 	//place the block in the world based off of the x,y,z coordinates of the world
 	public boolean place()
@@ -207,17 +200,11 @@ public class SerializedBlock implements Comparable<SerializedBlock> {
 
 	
 	//GETTERS FOR THE OTHER CLASSES
-	private int getX() {
-		return x;
-	}
+	private int getX() { return x; }
 	
-	private int getY() {
-		return y;
-	}
+	private int getY() { return y; }
 	
-	private int getZ() {
-		return z;
-	}
+	private int getZ() { return z; }
 	
 	public BlockVector getVector()
 	{	return new BlockVector(x,y,z); }
@@ -228,43 +215,22 @@ public class SerializedBlock implements Comparable<SerializedBlock> {
 	   return s;
 	}
 	
-	public String getBlockType()
-	{
-	   return type;
-	}
+	public String getBlockType() { return type; }
 	
-	public String getBlockWorld()
-	{
-	   return world;
-	}
+	public String getBlockWorld() { return world; }
 	
-	public String getBlockData()
-	{
-        return Byte.toString(data);
-	}
+	public String getBlockData() { return Byte.toString(data); }
 	
-	public String[] getBlockSignText()
-	{
-	   return signtext;
-	}
+	public String[] getBlockSignText() { return signtext; }
 	
-	public SerializedInventory getBlockChestInventory()
-	{
-	   return inventory;
-	}
-	public String getBlockXLoc()
-	{
-	    return Integer.toString(x);
-	}
+	public SerializedInventory getBlockChestInventory() { return inventory; }
+
+	public String getBlockXLoc() { return Integer.toString(x); }
 	
-	public String getBlockYLoc()
-	{
-	    return Integer.toString(y);
-	}
+	public String getBlockYLoc() { return Integer.toString(y); }
 	
-	public String getBlockZLoc()
-	{
-	    return Integer.toString(z);
-	}
+	public String getBlockZLoc() { return Integer.toString(z); }
+	
+	public boolean equals(final BlockState bs)	{ return Util.areBlocksEquivalent(this, bs); }
 }// SerializedBlock
 

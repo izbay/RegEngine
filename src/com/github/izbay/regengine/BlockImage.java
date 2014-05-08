@@ -19,6 +19,7 @@ import org.bukkit.plugin.Plugin;
 import org.bukkit.util.BlockVector;
 
 import com.github.izbay.regengine.serialize.SerializedBlock;
+import com.github.izbay.util.Util;
 
 /**
  * The equality question. It is of great importance to have a working equivalence test on blocks.  The current one, which tests whether their BlockStates are equal(), works quite well, but I doubt it will do what we want in every possible case.
@@ -28,6 +29,10 @@ import com.github.izbay.regengine.serialize.SerializedBlock;
  * - It stores whether a Detector Rail is activated (and probably a pressure plate, too), which state depends on the Entity perched atop.  Stationary Vehicles I'm considering treating, but not creatures.
  * - Bad one: Water source blocks aren't equal after regeneration; if the routine doesn't stop phys. events, it can loop forever.  This opens a breach in my restoration guarantee.
  * 
+ * @author jdjs
+ *
+ */
+/**
  * @author jdjs
  *
  */
@@ -110,8 +115,17 @@ public class BlockImage implements BlockState
 	}// equals()
 	*/
 
-	public boolean equals(final Block block) {
-		return this.block.isBlockEquivalent(block.getState());
+	public boolean equals(final Block block)	{ return this.equals(block.getState()); }// equals()
+	public boolean equals(final BlockState bs)	{ return Util.areBlocksEquivalent(this, bs); }// equals()
+	/**
+	 * @param b
+	 * @return
+	 * Claim: Equivalence relation.
+	 * Proof: Location.equals(Location) and Util.areBlocksEquivalent(SerializedBlock,SerializedBlock) are equivalence relations.  The former is predefined in Bukkit, the latter is in util.java.
+	 */
+	public boolean equals(final BlockImage b)	
+	{ 
+		return this.blockLoc.equals(b.blockLoc) && Util.areBlocksEquivalent(this.block, b.block); 
 	}// equals()
 	
 	/*
